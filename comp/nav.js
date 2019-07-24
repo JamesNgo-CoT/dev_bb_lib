@@ -1,38 +1,24 @@
 const NavItemModel = Backbone.BaseModel.extend({
-
+  defaults: {
+    title: 'Untitled',
+    fragment: '',
+    isActive: false,
+    isVisible: true,
+    requiresLogin: false
+  }
 });
 
+const NavItemView = Backbone.BaseView.extend({
+  tagName: 'li',
+  attributes: { role: 'presentation' },
 
-
-class NavItemModel extends BaseModel {
-  defaults() {
-    return {
-      title: 'Untitled',
-      fragment: '',
-      isActive: false,
-      isVisible: true,
-      requiresLogin: false
-    };
-  }
-}
-
-/* exported NavItemView */
-class NavItemView extends BaseView {
   initialize(options) {
     this.listenTo(options.model, 'change', () => {
       this.render();
     });
 
-    super.initialize(options);
-  }
-
-  tagName() {
-    return 'li';
-  }
-
-  attributes() {
-    return { role: 'presentation' };
-  }
+    Backbone.BaseView.prototype.initialize.call(this, options);
+  },
 
   render() {
     this.el.innerHTML = `<a href="#${this.model.escape('fragment')}">${this.model.escape('title')}</a>`;
@@ -49,38 +35,35 @@ class NavItemView extends BaseView {
       this.el.classList.add('hide');
     }
 
-    return super.render();
+    return Backbone.BaseView.prototype.render.call(this);
   }
-}
+});
 
-/* exported AuthyNavItemView */
-class AuthyNavItemView extends NavItemView {
+const AuthyNavItemView = NavItemView.extend({
   initialize(options) {
-    const authModel = _.result(Backbone, 'authModel');
+    const authModel = _.result(this, 'authModel') || _.result(Backbone, 'authModel');
     this.listenTo(authModel, 'change', () => {
       this.render();
     });
 
     return super.initialize(options);
-  }
+  },
 
   render() {
-    super.render();
-
-    const authModel = _.result(Backbone, 'authModel');
-    if (authModel && authModel.isLoggedIn()) {
-      this.el.classList.remove('hide');
-    } else {
-      this.el.classList.add('hide');
-    }
+    return NavItemView.prototype.render.call(this)
+      .then(() => {
+        const authModel = _.result(this, 'authModel') || _.result(Backbone, 'authModel');
+        if (authModel && authModel.isLoggedIn()) {
+          this.el.classList.remove('hide');
+        } else {
+          this.el.classList.add('hide');
+        }
+      });
   }
-}
+});
 
-/* exported NavCollection */
-class NavCollection extends BaseCollection {
-  model(attributes, options) {
-    return new NavItemModel(attributes, options);
-  }
+const NavCollection = Backbone.BaseCollection.extend({
+  model: NavItemModel,
 
   setActive(index) {
     this.each((model, modelIndex) => {
@@ -91,42 +74,30 @@ class NavCollection extends BaseCollection {
       }
     });
   }
-}
+});
 
-/* exported NavView */
-class NavView extends BaseView {
-  preinitialize(options = {}) {
-
-    // New property-factory override
-    this.navItemView = options.navItemView || this.navItemView;
-
-    // New property
-    this.navItems = [];
-
-    super.preinitialize(options);
-  }
+const NavView = Backbone.BaseView.extend({
+  attributes: { role: 'navigation' },
 
   initialize(options) {
+    this.navItems = [];
+
     this.listenTo(options.collection, 'update', () => {
       this.render();
     });
 
-    super.initialize(options);
-  }
-
-  attributes() {
-    return { role: 'navigation' };
-  }
+    Backbone.BaseView.prototype.initialize.call(this, options);
+  },
 
   removeNavItems() {
     this.navItems.forEach(navItem => navItem.remove());
     this.navItems = [];
-  }
+  },
 
   remove() {
     this.removeNavItems();
     super.remove();
-  }
+  },
 
   render() {
     this.removeNavItems();
@@ -141,10 +112,11 @@ class NavView extends BaseView {
     this.collection.each(model => {
       let navItemView;
       if (model.get('requiresLogin')) {
-        navItemView = new AuthyNavItemView({ model });
+        navItemView = new AuthyNavItemView({ model, authModel: this.authModel });
       } else {
         navItemView = new NavItemView({ model });
       }
+
       if (navItemView) {
         wrapper.appendChild(navItemView.el);
         navItemViewRenderPromises.push(navItemView.render());
@@ -154,7 +126,7 @@ class NavView extends BaseView {
 
     return Promise.all(navItemViewRenderPromises)
       .then(() => {
-        return super.render();
+        return Backbone.BaseView.prototype.render.call(this);
       });
   }
-}
+});

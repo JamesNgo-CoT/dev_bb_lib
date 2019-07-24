@@ -200,6 +200,8 @@ const DatatableView = Backbone.BaseView.extend({
   }
 });
 
+////////////////////////////////////////////////////////////////////////////////
+
 const FilteredDatatableView = DatatableView.extend({
   table() {
     const newTable = DatatableView.prototype.table.call(this);

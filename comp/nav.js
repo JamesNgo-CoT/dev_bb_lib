@@ -8,6 +8,8 @@ const NavItemModel = Backbone.BaseModel.extend({
   }
 });
 
+////////////////////////////////////////////////////////////////////////////////
+
 const NavItemView = Backbone.BaseView.extend({
   tagName: 'li',
   attributes: { role: 'presentation' },
@@ -39,6 +41,8 @@ const NavItemView = Backbone.BaseView.extend({
   }
 });
 
+////////////////////////////////////////////////////////////////////////////////
+
 const AuthyNavItemView = NavItemView.extend({
   initialize(options) {
     const authModel = _.result(this, 'authModel') || _.result(Backbone, 'authModel');
@@ -62,6 +66,8 @@ const AuthyNavItemView = NavItemView.extend({
   }
 });
 
+////////////////////////////////////////////////////////////////////////////////
+
 const NavCollection = Backbone.BaseCollection.extend({
   model: NavItemModel,
 
@@ -75,6 +81,8 @@ const NavCollection = Backbone.BaseCollection.extend({
     });
   }
 });
+
+////////////////////////////////////////////////////////////////////////////////
 
 const NavView = Backbone.BaseView.extend({
   attributes: { role: 'navigation' },

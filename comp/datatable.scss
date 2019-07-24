@@ -1,0 +1,93 @@
+%DatatableView {
+  .dataTables_wrapper {
+    margin-bottom: 5px;
+
+    .dataTables_length {
+      &:after {
+        content: "";
+        display: table;
+        clear: both;
+      }
+
+      label {
+        float: left;
+      }
+    }
+
+    .dataTables_filter {
+      &:after {
+        content: "";
+        display: table;
+        clear: both;
+      }
+
+      label {
+        float: right;
+      }
+    }
+
+    .table-responsive {
+      margin: 0;
+
+      table {
+        margin: 0 0 5px 0 !important;
+
+        button {
+          margin: 0;
+        }
+
+        thead {
+          tr {
+            th {
+              border-bottom-width: 0;
+
+              .form-control {
+                width: 100%;
+              }
+            }
+
+            &:last-child {
+              th {
+                border-bottom-width: 2px;
+              }
+            }
+          }
+
+          tr + tr {
+            th {
+              color: #000000;
+              font-weight: normal;
+            }
+          }
+        }
+      }
+    }
+
+    .dataTables_info {
+      padding: 7px 0 5px 0;
+    }
+
+    .dataTables_paginate {
+      &:after {
+        content: "";
+        display: table;
+        clear: both;
+      }
+
+      ul.pagination {
+        float: right;
+        margin-bottom: 5px;
+        padding: 0;
+      }
+    }
+  }
+
+  table.dataTable thead > tr > th.sorting_asc,
+  table.dataTable thead > tr > th.sorting_desc,
+  table.dataTable thead > tr > th.sorting,
+  table.dataTable thead > tr > td.sorting_asc,
+  table.dataTable thead > tr > td.sorting_desc,
+  table.dataTable thead > tr > td.sorting {
+    padding-right: 30px;
+  }
+}

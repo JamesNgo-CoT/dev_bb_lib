@@ -1,13 +1,4 @@
-Backbone.ajax = function (options) {
-  return new Promise((resolve, reject) => {
-    $.ajax(options)
-      .then((data, textStatus, jqXHR) => {
-        resolve(data);
-      }, (jqXHR, textStatus, errorThrown) => {
-        reject(errorThrown);
-      });
-  });
-}
+Backbone.ajax = ajax;
 
 ////////////////////////////////////////////////////////////////////////////////
 

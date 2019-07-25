@@ -123,3 +123,64 @@ function escapeODataValue(str) {
     .replace(/\]/g, "%5D")
     .replace(/\s/g, "%20");
 }
+
+////////////////////////////////////////////////////////////////////////////////
+
+function stringToFunction(str) {
+  if (typeof str !== 'string') {
+    return str;
+  }
+
+  if (str.indexOf('function(') === 0) {
+    return Function(`return ${str}`)();
+  } else if (typeof window[str] === 'function') {
+    return window[str];
+  }
+
+  return null;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+$.ajaxSetup({
+  dataFilter(data) {
+    return data;
+  }
+})
+
+function ajax(options) {
+  return new Promise((resolve, reject) => {
+    $.ajax(options)
+      .then((data, textStatus, jqXHR) => {
+        resolve(data);
+      }, (jqXHR, textStatus, errorThrown) => {
+        reject(errorThrown);
+      });
+  });
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+function loadScripts(...urls) {
+  const promises = [];
+
+  for (let index = 0, length = urls.length; index < length; index++) {
+    const url = urls[index];
+
+    if (document.querySelectorAll(`script[src="${url}"]`).length > 0) {
+      return ;
+    }
+
+    promises.push(new Promise((resolve) => {
+      var script = document.createElement('script');
+      script.setAttribute('src', url);
+
+      script.onload = () => { resolve(); };
+      script.onreadystatechange = () => { resolve(); };
+
+      document.getElementsByTagName('head')[0].appendChild(script);
+    }));
+  }
+
+  return Promise.all(promises);
+}

@@ -41,25 +41,53 @@ const DatatableView = Backbone.BaseView.extend({
       this.removeChild(this.el.firstChild);
     }
 
-    // Create HTML table.
-    const table = _.result(this, 'table');
-    this.el.appendChild(table);
+    let datatableDefinition = _.result(this, 'datatableDefinition');
+    return Promise.resolve()
+      .then(() => {
+        if (typeof datatableDefinition === 'string') {
+          return ajax({
+            url: datatableDefinition
+          }).then((data) => {
+            datatableDefinition = data;
+          });
+        }
+      })
+      .then(() => {
+        if (datatableDefinition.scripts) {
+          return loadScripts(...datatableDefinition.scripts);
+        }
+      })
+      .then(() => {
 
-    // Finalize definition/configuration.
-    const datatableDefinition = _.result(this, 'datatableDefinition');
-    datatableDefinition.dom = _.result(datatableDefinition, 'dom') || _.result(this, 'dom');
-    datatableDefinition.stateSave = _.result(datatableDefinition, 'stateSave') || _.result(this, 'stateSave');
-    datatableDefinition.stateSaveCallback = datatableDefinition.stateSaveCallback || ((...args) => this.stateSaveCallback(...args));
-    datatableDefinition.stateLoadCallback = datatableDefinition.stateLoadCallback || ((...args) => this.stateLoadCallback(...args));
-    datatableDefinition.ajax = datatableDefinition.ajax || ((...args) => this.ajax(...args));
-    datatableDefinition.initComplete = datatableDefinition.initComplete || ((...args) => this.initComplete(...args));
-    datatableDefinition.orderCellsTop = _.result(datatableDefinition, 'orderCellsTop') || _.result(this, 'orderCellsTop');
+        // Finalize definition/configuration.
+        datatableDefinition.dom = _.result(datatableDefinition, 'dom') || _.result(this, 'dom');
+        datatableDefinition.stateSave = _.result(datatableDefinition, 'stateSave') || _.result(this, 'stateSave');
+        datatableDefinition.stateSaveCallback = datatableDefinition.stateSaveCallback || ((...args) => this.stateSaveCallback(...args));
+        datatableDefinition.stateLoadCallback = datatableDefinition.stateLoadCallback || ((...args) => this.stateLoadCallback(...args));
+        datatableDefinition.ajax = datatableDefinition.ajax || ((...args) => this.ajax(...args));
+        datatableDefinition.initComplete = datatableDefinition.initComplete || ((...args) => this.initComplete(...args));
+        datatableDefinition.orderCellsTop = _.result(datatableDefinition, 'orderCellsTop') || _.result(this, 'orderCellsTop');
 
-    // Create Datatable.
-    this.datatable = $(table).DataTable(datatableDefinition);
+        // Convert string to functions.
+        datatableDefinition.columns.forEach(column => {
+          column.render = stringToFunction(column.render);
+          column.createdCell = stringToFunction(column.createdCell);
+        });
 
-    // Run super.render(), returns a Promise.
-    return Backbone.BaseView.prototype.render.call(this);
+        this.datatableDefinition = datatableDefinition;
+
+        // Build table.
+        return this.buildTable()
+          .then(table => {
+            this.el.appendChild(table);
+
+            // Create Datatable.
+            this.datatable = $(table).DataTable(datatableDefinition);
+
+            // Run super.render(), returns a Promise.
+            return Backbone.BaseView.prototype.render.call(this);
+          });
+      });
   },
 
   stateSaveCallback(settings, data) {
@@ -184,11 +212,12 @@ const DatatableView = Backbone.BaseView.extend({
 
   initComplete(settings, json) { },
 
-  table() {
+  buildTable() {
     const newTable = document.createElement('table');
     newTable.classList.add('table', 'table-bordered');
     newTable.style.width = '100%';
-    return newTable;
+
+    return Promise.resolve(newTable);
   },
 
   orderCellsTop: false,
@@ -203,66 +232,91 @@ const DatatableView = Backbone.BaseView.extend({
 ////////////////////////////////////////////////////////////////////////////////
 
 const FilteredDatatableView = DatatableView.extend({
-  table() {
-    const newTable = DatatableView.prototype.table.call(this);
+  buildTable() {
+    return DatatableView.prototype.buildTable.call(this)
+      .then(newTable => {
+        const thead = newTable.appendChild(document.createElement('thead'));
 
-    const thead = newTable.appendChild(document.createElement('thead'));
+        const tr1 = thead.appendChild(document.createElement('tr'));
+        this.datatableDefinition.columns.forEach(column => {
+          tr1.appendChild(document.createElement('th'));
+        });
 
-    const tr1 = thead.appendChild(document.createElement('tr'));
-    this.datatableDefinition.columns.forEach(column => {
-      tr1.appendChild(document.createElement('th'));
-    });
+        const tr2 = thead.appendChild(document.createElement('tr'));
 
-    const tr2 = thead.appendChild(document.createElement('tr'));
-    this.datatableDefinition.columns.forEach((column, index) => {
-      const th = tr2.appendChild(document.createElement('th'));
+        const promises = [];
+        this.datatableDefinition.columns.forEach((column, index) => {
+          const th = tr2.appendChild(document.createElement('th'));
 
-      if (column.searchable !== false) {
-        const title = column.title || column.data;
-
-        if (column.choices) {
-          const select = th.appendChild(document.createElement('select'));
-          select.classList.add('form-control');
-          select.setAttribute('aria-label', title);
-
-          select.addEventListener('change', () => {
-            this.datatable.columns(index).search(select.value).draw();
-          });
-
-          const option0 = select.appendChild(document.createElement('option'));
-          option0.textContent = `All ${title}`;
-          option0.setAttribute('value', '');
-
-          let choices = column.choices;
-          Promise.resolve()
-            .then(() => {
-              if (Array.isArray(choices)) {
-                choices = choices.slice(choices);
-              }
-            })
-            .then(() => {
-              choices.forEach((choice) => {
-                const option = select.appendChild(document.createElement('option'));
-                option.textContent = choice.text || choice.value;
-                option.setAttribute('value', choice.value || choice.text);
-              });
-            });
-        } else {
-          const input = th.appendChild(document.createElement('input'));
-          input.classList.add('form-control');
-          input.setAttribute('aria-label', `Filter by ${title}`);
-
-          const eventHandler = () => {
-            this.datatable.columns(index).search(input.value).draw();
+          if (column.searchable === false) {
+            return;
           }
 
-          input.addEventListener('change', eventHandler);
-          input.addEventListener('keyup', eventHandler);
-        }
-      }
-    });
+          const title = column.title || column.data;
 
-    return newTable;
+          if (column.choices) {
+            const select = th.appendChild(document.createElement('select'));
+            select.classList.add('form-control');
+            select.setAttribute('aria-label', title);
+
+            select.addEventListener('change', () => {
+              this.datatable.columns(index).search(select.value).draw();
+            });
+
+            const option0 = select.appendChild(document.createElement('option'));
+            option0.setAttribute('value', '');
+
+            let choices = column.choices;
+            const promise = Promise.resolve()
+              .then(() => {
+                if (Array.isArray(choices)) {
+                  choices = choices.slice(choices);
+                } else if (typeof choices === 'string') {
+                  option0.innerHTML = `Loading&hellip;`;
+                  return ajax({
+                    url: choices
+                  }).then((data) => {
+                    choices = data;
+                  });
+                }
+              })
+              .then(() => {
+                if (column.choicesMap) {
+                  column.choicesMap = stringToFunction(column.choicesMap);
+                  choices = column.choicesMap(choices);
+                }
+
+                if (choices[0].value !== '') {
+                  choices.unshift({ text: `Any ${column.title || column.data}`, value: '' });
+                }
+
+                select.removeChild(option0);
+                choices.forEach((choice) => {
+                  const option = select.appendChild(document.createElement('option'));
+                  option.textContent = choice.text || choice.value;
+                  option.setAttribute('value', choice.value != null ? choice.value : choice.text);
+                });
+              });
+            promises.push(promise);
+          } else {
+            const input = th.appendChild(document.createElement('input'));
+            input.classList.add('form-control');
+            input.setAttribute('aria-label', `Filter by ${title}`);
+
+            const eventHandler = () => {
+              this.datatable.columns(index).search(input.value).draw();
+            }
+
+            input.addEventListener('change', eventHandler);
+            input.addEventListener('keyup', eventHandler);
+          }
+        });
+
+        return Promise.all(promises)
+          .then(() => {
+            return newTable;
+          });
+      });
   },
 
   orderCellsTop: true,

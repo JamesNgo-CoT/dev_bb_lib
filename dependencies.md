@@ -10,7 +10,7 @@ npm install datatables.net datatables.net-bs datatables.net-buttons datatables.n
 
 ``` HTML
 <!-- Datatable Styles -->
-<link rel="stylesheet" href="./node_modules/datatables.net-bs/css/dataTables.bootstrap.css">
+<link rel="stylesheet" href="/node_modules/datatables.net-bs/css/dataTables.bootstrap.css">
 <link rel="stylesheet" href="/node_modules/datatables.net-buttons-bs/css/buttons.bootstrap.css">
 ```
 

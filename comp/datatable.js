@@ -149,7 +149,7 @@ const DatatableView = Backbone.BaseView.extend({
       const filters = columns
         .map((column, index) => {
           if (column.searchable && column.search && column.search.value && column.search.value.trim()) {
-            switch (column.type) {
+            switch (datatableDefinition.columns[index].type) {
               case 'boolean':
               case 'number':
               case 'date':
@@ -346,4 +346,13 @@ const FilteredDatatableView = DatatableView.extend({
   },
 
   orderCellsTop: true,
+
+  resetFilters() {
+    const filters = this.el.querySelectorAll(`[data-column-index]`);
+    for (let index = 0, length = filters.length; index < length; index++) {
+      const index = filters[index].getAttribute('data-column-index');
+      this.datatable.column(index).search('');
+    }
+    this.datatable.draw();
+  }
 });

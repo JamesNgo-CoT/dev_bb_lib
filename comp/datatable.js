@@ -12,16 +12,58 @@ const DatatableView = Backbone.BaseView.extend({
 
   datatableDefinition: {
     columns: [
-      { title: 'Column 1', data: 'col1' },
-      { title: 'Column 2', data: 'col2' },
-      { title: 'Column 3', data: 'col3' },
-      { width: '100px', render() { return '<a href="#" class="btn btn-default">View</a>'; } }
+      {
+        title: 'Column 1',
+        data: 'col1'
+      },
+      {
+        title: 'Column 2',
+        data: 'col2'
+      },
+      {
+        title: 'Column 3',
+        data: 'col3'
+      },
+      {
+        className: 'excludeFromButtons',
+        data: 'id',
+        orderable: false,
+        render(data) {
+          return '<a href=#apps/' + data + ' class=btn btn-default>View</a>';
+        },
+        searchable: false,
+        width: '57px'
+      }
     ],
     data: [
       { col1: 'Data (1, 1)', col2: 'Data (1, 2)', col3: 'Data (1, 3)' },
       { col1: 'Data (1, 2)', col2: 'Data (2, 2)', col3: 'Data (3, 3)' },
       { col1: 'Data (1, 3)', col2: 'Data (2, 3)', col3: 'Data (3, 3)' }
     ]
+  },
+
+  buttons() {
+    return [{
+      extend: 'copyHtml5',
+      exportOptions: { columns: ':visible:not(.excludeFromButtons)' },
+      title: this.title
+    }, {
+      extend: 'csvHtml5',
+      exportOptions: { columns: ':visible:not(.excludeFromButtons)' },
+      title: this.title
+    }, {
+      extend: 'excelHtml5',
+      exportOptions: { columns: ':visible:not(.excludeFromButtons)' },
+      title: this.title
+    }, {
+      extend: 'pdfHtml5',
+      exportOptions: { columns: ':visible:not(.excludeFromButtons)' },
+      title: this.title
+    }, {
+      extend: 'print',
+      exportOptions: { columns: ':visible:not(.excludeFromButtons)' },
+      title: this.title
+    }]
   },
 
   dom: `<'row'<'col-sm-6'l><'col-sm-6'f>><'row'<'col-sm-12'<'table-responsive'tr>>><'row'<'col-sm-5'i><'col-sm-7'p>>B`,
@@ -52,14 +94,7 @@ const DatatableView = Backbone.BaseView.extend({
       this.removeChild(this.el.firstChild);
     }
 
-    const suppliedDatatableDefinition = _.result(this, 'datatableDefinition');
-
-    let datatableDefinition = {};
-    for (const key in suppliedDatatableDefinition) {
-      if (suppliedDatatableDefinition.hasOwnProperty(key)) {
-        datatableDefinition[key] = suppliedDatatableDefinition[key];
-      }
-    }
+    let datatableDefinition = _.result(this, 'datatableDefinition');
 
     return Promise.resolve()
       .then(() => {
@@ -79,14 +114,11 @@ const DatatableView = Backbone.BaseView.extend({
       .then(() => {
 
         // Finalize definition/configuration.
+        datatableDefinition.buttons = _.result(datatableDefinition, 'buttons') || _.result(this, 'buttons');
         datatableDefinition.dom = _.result(datatableDefinition, 'dom') || _.result(this, 'dom');
         datatableDefinition.stateSave = _.result(datatableDefinition, 'stateSave') || _.result(this, 'stateSave');
         datatableDefinition.ajax = datatableDefinition.ajax || ((...args) => this.ajax(...args));
         datatableDefinition.orderCellsTop = _.result(datatableDefinition, 'orderCellsTop') || _.result(this, 'orderCellsTop');
-
-        datatableDefinition.stateSaveCallback = datatableDefinition.stateSaveCallback || ((...args) => this.stateSaveCallback(...args));
-        datatableDefinition.stateLoadCallback = datatableDefinition.stateLoadCallback || ((...args) => this.stateLoadCallback(...args));
-        datatableDefinition.initComplete = datatableDefinition.initComplete || ((...args) => this.initComplete(...args));
 
         // Convert string to functions.
         datatableDefinition.columns.forEach(column => {
@@ -94,7 +126,17 @@ const DatatableView = Backbone.BaseView.extend({
           column.createdCell = stringToFunction(column.createdCell);
         });
 
-        this.datatableDefinition = datatableDefinition;
+        // NOTE: Weird behaviour - Assigning functions into existing object changes the function's context to previous instance...
+        // So I had to keep function in temporary object by duplicating the definition.
+        const tempDatatableDefinition = {};
+        for (const key in datatableDefinition) {
+          if (datatableDefinition.hasOwnProperty(key)) {
+            tempDatatableDefinition[key] = datatableDefinition[key];
+          }
+        }
+        tempDatatableDefinition.stateSaveCallback = datatableDefinition.stateSaveCallback || ((...args) => this.stateSaveCallback(...args));
+        tempDatatableDefinition.stateLoadCallback = datatableDefinition.stateLoadCallback || ((...args) => this.stateLoadCallback(...args));
+        tempDatatableDefinition.initComplete = datatableDefinition.initComplete || ((...args) => this.initComplete(...args));
 
         // Build table.
         return this.buildTable()
@@ -102,7 +144,7 @@ const DatatableView = Backbone.BaseView.extend({
             this.el.appendChild(table);
 
             // Create Datatable.
-            this.datatable = $(table).DataTable(datatableDefinition);
+            this.datatable = $(table).DataTable(tempDatatableDefinition);
 
             // Run super.render(), returns a Promise.
             return Backbone.BaseView.prototype.render.call(this);
@@ -223,7 +265,7 @@ const DatatableView = Backbone.BaseView.extend({
     }
   },
 
-  initComplete(settings, json) { },
+  initComplete(settings, json) {},
 
   buildTable() {
     const newTable = document.createElement('table');
@@ -350,8 +392,10 @@ const FilteredDatatableView = DatatableView.extend({
   resetFilters() {
     const filters = this.el.querySelectorAll(`[data-column-index]`);
     for (let index = 0, length = filters.length; index < length; index++) {
-      const index = filters[index].getAttribute('data-column-index');
-      this.datatable.column(index).search('');
+      const filter = filters[index];
+      const columnIndex = filter.getAttribute('data-column-index');
+      filter.value = '';
+      this.datatable.column(columnIndex).search('');
     }
     this.datatable.draw();
   }

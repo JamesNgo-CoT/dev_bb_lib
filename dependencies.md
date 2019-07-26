@@ -29,16 +29,16 @@ npm install datatables.net datatables.net-bs datatables.net-buttons datatables.n
 <script src="/node_modules/datatables.net-buttons-bs/js/buttons.bootstrap.js"></script>
 
 <!-- Library Core -->
-<script type="text/javascript" src="<!-- @echo SRC_PATH -->/scripts/lib/utilities.js"></script>
-<script type="text/javascript" src="<!-- @echo SRC_PATH -->/scripts/lib/coreoverride.js"></script>
-<script type="text/javascript" src="<!-- @echo SRC_PATH -->/scripts/lib/backboneext.js"></script>
+<script src="<!-- @echo SRC_PATH -->/scripts/lib/utilities.js"></script>
+<script src="<!-- @echo SRC_PATH -->/scripts/lib/coreoverride.js"></script>
+<script src="<!-- @echo SRC_PATH -->/scripts/lib/backboneext.js"></script>
 
 <!-- Library Components -->
-<script type="text/javascript" src="<!-- @echo SRC_PATH -->/scripts/lib/comp/loginbutton.js"></script>
-<script type="text/javascript" src="<!-- @echo SRC_PATH -->/scripts/lib/comp/alert.js"></script>
-<script type="text/javascript" src="<!-- @echo SRC_PATH -->/scripts/lib/comp/form.js"></script>
-<script type="text/javascript" src="<!-- @echo SRC_PATH -->/scripts/lib/comp/loginform.js"></script>
-<script type="text/javascript" src="<!-- @echo SRC_PATH -->/scripts/lib/comp/datatable.js"></script>
+<script src="<!-- @echo SRC_PATH -->/scripts/lib/comp/loginbutton.js"></script>
+<script src="<!-- @echo SRC_PATH -->/scripts/lib/comp/alert.js"></script>
+<script src="<!-- @echo SRC_PATH -->/scripts/lib/comp/form.js"></script>
+<script src="<!-- @echo SRC_PATH -->/scripts/lib/comp/loginform.js"></script>
+<script src="<!-- @echo SRC_PATH -->/scripts/lib/comp/datatable.js"></script>
 ```
 
 

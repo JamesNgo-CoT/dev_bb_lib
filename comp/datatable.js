@@ -1,4 +1,15 @@
 const DatatableView = Backbone.BaseView.extend({
+  initialize(options = {}) {
+    if (options.webStorage) {
+      this.webStorage = options.webStorage;
+    }
+    if (options.webStorageKey) {
+      this.webStorageKey = options.webStorageKey;
+    }
+
+    Backbone.BaseView.prototype.initialize.call(this, options);
+  },
+
   datatableDefinition: {
     columns: [
       { title: 'Column 1', data: 'col1' },
@@ -41,7 +52,15 @@ const DatatableView = Backbone.BaseView.extend({
       this.removeChild(this.el.firstChild);
     }
 
-    let datatableDefinition = _.result(this, 'datatableDefinition');
+    const suppliedDatatableDefinition = _.result(this, 'datatableDefinition');
+
+    let datatableDefinition = {};
+    for (const key in suppliedDatatableDefinition) {
+      if (suppliedDatatableDefinition.hasOwnProperty(key)) {
+        datatableDefinition[key] = suppliedDatatableDefinition[key];
+      }
+    }
+
     return Promise.resolve()
       .then(() => {
         if (typeof datatableDefinition === 'string') {
@@ -62,11 +81,12 @@ const DatatableView = Backbone.BaseView.extend({
         // Finalize definition/configuration.
         datatableDefinition.dom = _.result(datatableDefinition, 'dom') || _.result(this, 'dom');
         datatableDefinition.stateSave = _.result(datatableDefinition, 'stateSave') || _.result(this, 'stateSave');
+        datatableDefinition.ajax = datatableDefinition.ajax || ((...args) => this.ajax(...args));
+        datatableDefinition.orderCellsTop = _.result(datatableDefinition, 'orderCellsTop') || _.result(this, 'orderCellsTop');
+
         datatableDefinition.stateSaveCallback = datatableDefinition.stateSaveCallback || ((...args) => this.stateSaveCallback(...args));
         datatableDefinition.stateLoadCallback = datatableDefinition.stateLoadCallback || ((...args) => this.stateLoadCallback(...args));
-        datatableDefinition.ajax = datatableDefinition.ajax || ((...args) => this.ajax(...args));
         datatableDefinition.initComplete = datatableDefinition.initComplete || ((...args) => this.initComplete(...args));
-        datatableDefinition.orderCellsTop = _.result(datatableDefinition, 'orderCellsTop') || _.result(this, 'orderCellsTop');
 
         // Convert string to functions.
         datatableDefinition.columns.forEach(column => {
@@ -125,30 +145,27 @@ const DatatableView = Backbone.BaseView.extend({
         .filter((select, index, array) => array.indexOf(select) === index)
         .join(',');
 
-      // TODO - Use type instead of filter type.
       // $filter
       const filters = columns
         .map((column, index) => {
-          if (column.searchable && column.search && column.search.value) {
-            if (datatableDefinition && datatableDefinition.columns && datatableDefinition.columns[index]
-              && datatableDefinition.columns[index].filterType) {
+          if (column.searchable && column.search && column.search.value && column.search.value.trim()) {
+            switch (column.type) {
+              case 'boolean':
+              case 'number':
+              case 'date':
+                return `${column.data} eq ${escapeODataValue(column.search.value)}`;
 
-              switch (datatableDefinition.columns[index].filterType) {
-                case 'custom function':
-                  return `(${datatableDefinition.columns[index].filterFunction(column, datatableDefinition.columns[index])})`;
+              case 'function':
+                const func = stringToFunction(datatableDefinition.columns[index].filter);
+                return `(${func(column, datatableDefinition.columns[index])})`;
 
-                case 'string equals':
-                  return `${column.data} eq '${escapeODataValue(column.search.value)}'`;
-
-                case 'string contains':
-                  return `(${column.search.value
-                    .split(' ')
-                    .filter((value, index, array) => value && array.indexOf(value) === index)
-                    .map(value => `contains(tolower(${column.data}),'${escapeODataValue(value.toLowerCase())}')`)
-                    .join(' and ')})`;
-              }
+              default:
+                return `(${column.search.value
+                  .split(' ')
+                  .filter((value, index, array) => value && array.indexOf(value) === index)
+                  .map(value => `contains(tolower(${column.data}),'${escapeODataValue(value.toLowerCase())}')`)
+                  .join(' and ')})`;
             }
-            return `${column.data} eq ${escapeODataValue(column.search.value)}`;
           } else {
             return false;
           }
@@ -158,25 +175,21 @@ const DatatableView = Backbone.BaseView.extend({
         queryObject['$filter'] = filters.join(' and ');
       }
 
-      // TODO - Use type instead of filter type.
       // $orderby
       if (order.length > 0) {
         queryObject['$orderby'] = order.map(config => {
           let orderBy = columns[config.column].data;
-          if (datatableDefinition && datatableDefinition.columns
-            && datatableDefinition.columns[config.column]
-            && datatableDefinition.columns[config.column].orderType) {
-
-            switch (datatableDefinition.columns[config.column].orderType) {
-              case 'custom function':
-                return datatableDefinition.columns[config.column].orderType
-                  ? datatableDefinition.columns[config.column].orderType(config, orderBy, datatableDefinition.columns[config.column]) : null;
-
-              case 'string':
-                return `tolower(${orderBy}) ${config.dir}`;
-            }
+          switch (datatableDefinition.columns[config.column].type) {
+            case 'boolean':
+            case 'number':
+            case 'date':
+              return `${orderBy} ${config.dir}`;
+            case 'function':
+              const func = stringToFunction(datatableDefinition.columns[index].orderBy);
+              return func(config, orderBy, datatableDefinition.columns[config.column]);
+            default:
+              return `tolower(${orderBy}) ${config.dir}`;
           }
-          return `${orderBy} ${config.dir}`;
         }).filter(value => value).join(',');
       }
 
@@ -232,6 +245,17 @@ const DatatableView = Backbone.BaseView.extend({
 ////////////////////////////////////////////////////////////////////////////////
 
 const FilteredDatatableView = DatatableView.extend({
+  initComplete(settings, json) {
+    DatatableView.prototype.initComplete.call(this, settings, json);
+
+    for (let index = 0, length = this.datatable.columns()[0].length; index < length; index++) {
+      const field = this.el.querySelector(`[data-column-index="${index}"]`);
+      if (field) {
+        this.el.querySelector(`[data-column-index="${index}"]`).value = this.datatable.column(index).search() || '';
+      }
+    }
+  },
+
   buildTable() {
     return DatatableView.prototype.buildTable.call(this)
       .then(newTable => {
@@ -258,6 +282,7 @@ const FilteredDatatableView = DatatableView.extend({
             const select = th.appendChild(document.createElement('select'));
             select.classList.add('form-control');
             select.setAttribute('aria-label', title);
+            select.setAttribute('data-column-index', index);
 
             select.addEventListener('change', () => {
               this.datatable.columns(index).search(select.value).draw();
@@ -302,6 +327,7 @@ const FilteredDatatableView = DatatableView.extend({
             const input = th.appendChild(document.createElement('input'));
             input.classList.add('form-control');
             input.setAttribute('aria-label', `Filter by ${title}`);
+            input.setAttribute('data-column-index', index);
 
             const eventHandler = () => {
               this.datatable.columns(index).search(input.value).draw();

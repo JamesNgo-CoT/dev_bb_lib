@@ -114,15 +114,6 @@ if (window.CotForm) {
     }
 
     function finalizeRenderer(renderer) {
-      // if (typeof renderer === 'function') {
-      //   return renderer;
-      // } else if (typeof renderer === 'string') {
-      //   if (renderer.indexOf('function(') === 0) {
-      //     return Function(`return ${renderer}`)();
-      //   } else if (typeof window[renderer] === 'function') {
-      //     return window[renderer];
-      //   }
-      // }
       return stringToFunction(renderer);
     }
 

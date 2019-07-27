@@ -61,6 +61,8 @@ const LoginFormView = FormView.extend({
   },
 
   success() {
+    this.trigger('loggingin');
+
     const button = this.el.querySelector('.btn-login');
     button.setAttribute('disabled', '');
 
@@ -72,6 +74,7 @@ const LoginFormView = FormView.extend({
         FormView.prototype.success.call(this);
       }, (error) => {
         this.showAlert('<strong>Login failed.</strong> Please review your user name and password and try again.', 0);
+        this.trigger('failed');
       })
       .then(() => {
         this.formValidator.resetForm();

@@ -269,7 +269,7 @@ const DatatableView = Backbone.BaseView.extend({
 
   buildTable() {
     const newTable = document.createElement('table');
-    newTable.classList.add('table', 'table-bordered');
+    newTable.classList.add('table', 'table-bordered', 'table-striped');
     newTable.style.width = '100%';
 
     return Promise.resolve(newTable);

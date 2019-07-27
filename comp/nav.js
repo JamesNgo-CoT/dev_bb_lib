@@ -50,7 +50,7 @@ const AuthyNavItemView = NavItemView.extend({
       this.render();
     });
 
-    return super.initialize(options);
+    return NavItemView.prototype.initialize.call(this, options);
   },
 
   render() {
@@ -104,7 +104,7 @@ const NavView = Backbone.BaseView.extend({
 
   remove() {
     this.removeNavItems();
-    super.remove();
+    Backbone.BaseView.prototype.remove.call(this);
   },
 
   render() {

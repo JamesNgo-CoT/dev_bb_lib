@@ -91,3 +91,38 @@
     padding-right: 30px;
   }
 }
+
+%FilteredDatatableView {
+  @extend %DatatableView;
+
+  .dataTables_wrapper {
+    .table-responsive {
+      table {
+        thead {
+          tr {
+            th {
+              border-bottom-width: 0;
+
+              .form-control {
+                width: 100%;
+              }
+            }
+
+            &:last-child {
+              th {
+                border-bottom-width: 2px;
+              }
+            }
+          }
+
+          tr + tr {
+            th {
+              color: #000000;
+              font-weight: normal;
+            }
+          }
+        }
+      }
+    }
+  }
+}

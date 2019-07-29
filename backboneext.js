@@ -2,6 +2,13 @@ Backbone.ajax = ajax;
 
 ////////////////////////////////////////////////////////////////////////////////
 
+Backbone.history.restart = () => {
+  Backbone.history.stop();
+  Backbone.history.start();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 Backbone.sync = (backboneSync => ((method, model, options = {}) => {
   options.headers = options.headers || {};
   options.headers.Accept = options.headers.Accept || 'application/json; charset=utf-8';
@@ -34,7 +41,11 @@ Backbone.sync = (backboneSync => ((method, model, options = {}) => {
     }
   }
 
-  return backboneSync.call(this, method, model, options);
+  return backboneSync.call(this, method, model, options)
+    .then((returnValue) => {
+      model.lastSyncJSON = model.toJSON();
+      return returnValue;
+    });
 }))(Backbone.sync);
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -85,7 +96,7 @@ Backbone.BaseRouter = Backbone.Router.extend({
       }
     }
 
-    if (typeof callback === 'function' && cleanupFunctionReturnValue !== false) {
+    if (cleanupFunctionReturnValue !== false && typeof callback === 'function') {
       Promise.resolve()
         .then(() => {
           return callback.call(this, ...args);
@@ -183,13 +194,42 @@ Backbone.BaseModel = Backbone.Model.extend({
   webStorageParse: Backbone.webStorageItems.webStorageParse,
   webStorageFetch: Backbone.webStorageItems.webStorageFetch,
   webStorageSave: Backbone.webStorageItems.webStorageSave,
-  webStorageDestroy: Backbone.webStorageItems.webStorageDestroy
+  webStorageDestroy: Backbone.webStorageItems.webStorageDestroy,
+
+  initialize(attributes, options = {}) {
+    if (options.urlRoot) {
+      this.urlRoot = options.urlRoot;
+    }
+
+    Backbone.Model.prototype.initialize.call(this, attributes, options);
+  },
+
+  hasChanged() {
+    const lastSyncJSON = {};
+    if (this.lastSyncJSON) {
+      for (const key in this.lastSyncJSON) {
+        lastSyncJSON[key] = this.lastSyncJSON[key];
+      }
+    }
+
+    const currentJSON = this.toJSON();
+
+    return JSON.stringify(lastSyncJSON) != JSON.stringify(currentJSON);
+  }
 });
 
 ////////////////////////////////////////////////////////////////////////////////
 
 Backbone.BaseCollection = Backbone.Collection.extend({
   model: Backbone.BaseModel,
+
+  initialize(models, options = {}) {
+    if (options.url) {
+      this.url = options.url;
+    }
+
+    Backbone.Collection.prototype.initialize.call(this, models, options);
+  },
 
   fetch(options) {
     if (options && options.query) {
@@ -304,7 +344,7 @@ Backbone.AuthModel = Backbone.BaseModel.extend({
           .then(() => {
             resolve(this.isLoggedIn());
           }, (error) => {
-            reject(error);
+            resolve(this.isLoggedIn());
           });
       }
     });

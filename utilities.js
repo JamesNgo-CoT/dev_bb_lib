@@ -110,6 +110,32 @@ function swapView(element, oldView, newView) {
 
 ////////////////////////////////////////////////////////////////////////////////
 
+function newSwapView(element, oldView, newView) {
+  element.style.height = getComputedStyle(element).height;
+  element.style.overflow = 'hidden';
+
+  if (oldView) {
+    oldView.remove();
+  }
+
+  return Promise.resolve()
+    .then(() => {
+      if (newView) {
+        element.appendChild(newView.el);
+        return newView.render();
+      }
+    })
+    .then(() => {
+      element.style.removeProperty('overflow');
+      element.style.removeProperty('height');
+    })
+    .then(() => {
+      return newView;
+    });
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 function escapeODataValue(str) {
   return str
     .replace(/'/g, "''")

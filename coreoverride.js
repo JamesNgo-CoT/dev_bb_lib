@@ -101,7 +101,7 @@ if (window.CotForm) {
           if (repeatControl) {
             const repeatControlRows = repeatControl.rows;
             repeatControlRows.forEach(repeatControlRow => {
-              const fields = row.fields;
+              const fields = repeatControlRow.fields;
               fields.forEach(field => {
                 renderPromises.push(renderField({ definition, section, row, field, repeatControl, repeatControlRow }));
               });
@@ -215,5 +215,33 @@ if (window.CotForm) {
 
   window.CotForm.prototype.getView = function () {
     return this._view;
+  }
+
+  const originalFillFromModel = window.CotForm.prototype._fillFromModel;
+  window.CotForm.prototype._fillFromModel = function (model) {
+    originalFillFromModel.call(this, model);
+
+    if (this._isRendered) {
+      var sections = this._definition['sections'] || [];
+      for (let sectionIndex = 0, sectionsLength = sections.length; sectionIndex < sectionsLength; sectionIndex++) {
+        var rows = sections[sectionIndex].rows;
+        for (let rowIndex = 0, rowsLength = rows.length; rowIndex < rowsLength; rowIndex++) {
+          const row = rows[rowIndex];
+          if (row.repeatControl && row.repeatControl.bindTo) {
+            const repeatControlCollection = model.get(row.repeatControl.bindTo);
+            let index = 0;
+            while (index < repeatControlCollection.models.length) {
+              const model = repeatControlCollection.at(index);
+              if (JSON.stringify(model.toJSON()) === JSON.stringify({})) {
+                repeatControlCollection.remove(model);
+                continue;
+              }
+
+              index++
+            }
+          }
+        }
+      }
+    }
   }
 }

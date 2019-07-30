@@ -1,52 +1,61 @@
-const AlertModel = Backbone.BaseModel.extend({
-  defaults: {
-    message: null
-  }
+/* global AppEssentials */
+
+AppEssentials.Backbone.Components.AlertModel = AppEssentials.Backbone.Model.extend({
+
+	// Property
+
+	defaults: {
+		message: null
+	}
 });
 
-////////////////////////////////////////////////////////////////////////////////
+AppEssentials.Backbone.Components.AlertView = AppEssentials.Backbone.View.extend({
 
-const AlertView = Backbone.BaseView.extend({
-  className: 'alert-danger',
-  attributes: { role: 'alert' },
+	// Properties
 
-  initialize(options) {
-    this.listenTo(options.model, 'change', () => {
-      this.render();
-    });
+	attributes: { role: 'alert' },
 
-    Backbone.BaseView.prototype.initialize.call(this, options);
-  },
+	className: 'alert-danger',
 
-  render() {
-    while (this.el.firstChild) {
-      this.removeChild(this.el.firstChild);
-    }
+	// Methods
 
-    this.el.classList.add('alert', 'alert-dismissible');
+	initialize(options) {
+		this.listenTo(options.model, 'change', () => {
+			this.render();
+		});
 
-    const messageElementButton = this.el.appendChild(document.createElement('button'));
-    messageElementButton.classList.add('close');
-    messageElementButton.setAttribute('type', 'button');
-    messageElementButton.setAttribute('data-dismiss', 'alert');
-    messageElementButton.setAttribute('aria-label', 'Close');
+		AppEssentials.Backbone.View.prototype.initialize.call(this, options);
+	},
 
-    const messageElementButtonTimes = messageElementButton.appendChild(document.createElement('span'));
-    messageElementButtonTimes.setAttribute('aria-hidden', 'true');
-    messageElementButtonTimes.innerHTML = '&times;';
+	close() {
+		this.el.querySelector('button[data-dismiss="alert"]').click();
+	},
 
-    const innerMessageElement = this.el.appendChild(document.createElement('div'));
-    const message = this.model.get('message');
-    if (typeof message === 'string') {
-      innerMessageElement.innerHTML = message;
-    } else {
-      innerMessageElement.appendChild(message);
-    }
+	render() {
+		while (this.el.firstChild) {
+			this.removeChild(this.el.firstChild);
+		}
 
-    return Backbone.BaseView.prototype.render.call(this);
-  },
+		this.el.classList.add('alert', 'alert-dismissible');
 
-  close() {
-    this.el.querySelector('button[data-dismiss="alert"]').click();
-  }
+		const messageElementButton = this.el.appendChild(document.createElement('button'));
+		messageElementButton.setAttribute('type', 'button');
+		messageElementButton.setAttribute('data-dismiss', 'alert');
+		messageElementButton.setAttribute('aria-label', 'Close');
+		messageElementButton.classList.add('close');
+
+		const messageElementButtonTimes = messageElementButton.appendChild(document.createElement('span'));
+		messageElementButtonTimes.setAttribute('aria-hidden', 'true');
+		messageElementButtonTimes.innerHTML = '&times;';
+
+		const innerMessageElement = this.el.appendChild(document.createElement('div'));
+		const message = this.model.get('message');
+		if (typeof message === 'string') {
+			innerMessageElement.innerHTML = message;
+		} else {
+			innerMessageElement.appendChild(message);
+		}
+
+		return AppEssentials.Backbone.View.prototype.render.call(this);
+	}
 });

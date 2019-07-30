@@ -142,17 +142,39 @@ if (window.CotForm) {
           renderField({ definition, section, row, field, grid, repeatControl, repeatControlRow }) {
             return Promise.resolve()
               .then(() => {
-                if (typeof field.choices === 'string') {
-                  return ajax({ url: field.choices })
-                    .then((data) => {
-                      field.choices = data;
-                      if (field.choicesMap) {
-                        field.choices = field.choicesMap(field.choicesMap);
-                      }
-                    });
+                if (field.choices) {
+                  if (!field.originalChoices) {
+                    if (Array.isArray(field.choices)) {
+                      field.originalChoices = field.choices.slice(0);
+                    } else {
+                      field.originalChoices = field.choices;
+                    }
+                  }
+
+                  if (Array.isArray(field.originalChoices)) {
+                    field.choices = field.originalChoices.slice(0);
+                  } else {
+                    field.choices = field.originalChoices;
+                  }
+
+                  if (typeof field.choices === 'string') {
+                    return ajax({ url: choices })
+                      .then((data) => {
+                        field.choices = data;
+                      });
+                  }
                 }
               })
               .then(() => {
+                if (field.choicesMap) {
+                  field.choicesMap = stringToFunction(field.choicesMap);
+                  field.choices = field.choicesMap(field.choices);
+                }
+
+                if (field.type === 'dropdown' && field.choices[0].value !== '') {
+                  field.choices.unshift({ text: '- Select -', value: '' });
+                }
+
                 if (field.choices) {
                   let value;
                   if (field.value != null) {

@@ -337,7 +337,8 @@ const FilteredDatatableView = DatatableView.extend({
             const promise = Promise.resolve()
               .then(() => {
                 if (Array.isArray(choices)) {
-                  choices = choices.slice(choices);
+                  // choices = choices.slice(choices);
+                  choices = choices.slice(0);
                 } else if (typeof choices === 'string') {
                   option0.innerHTML = `Loading&hellip;`;
                   return ajax({

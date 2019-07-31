@@ -92,7 +92,7 @@ $(function () {
     app: APP_TITLE
   });
 
-  AE.BB.Common.loginModel = new LoginModel();
+  AE.Shared.loginModel = new LoginModel();
 
   const LoginButtonView = AE.BB.Comp.LoginButtonView.extend({
     className: 'loginButtonView'
@@ -109,9 +109,9 @@ $(function () {
     className: 'dialogView',
   });
 
-  AE.BB.Common.dialogView = new DialogView({ model: new AE.BB.Comp.DialogModel() });
-  app.container.appendChild(AE.BB.Common.dialogView.el);
-  AE.BB.Common.dialogView.render();
+  AE.Shared.dialogView = new DialogView({ model: new AE.BB.Comp.DialogModel() });
+  app.container.appendChild(AE.Shared.dialogView.el);
+  AE.Shared.dialogView.render();
 
   //////////////////////////////////////////////////////////////////////////////
 
@@ -128,7 +128,7 @@ $(function () {
     // New Properties
 
     routeHomePage() {
-      const loginModel = AE.BB.Common.loginModel;
+      const loginModel = AE.Shared.loginModel;
       return loginModel.authentication()
         .then(isLoggedIn => {
           if (!isLoggedIn) {
@@ -163,7 +163,7 @@ $(function () {
     },
 
     routeLoginPage(queryString) {
-      const loginModel = AE.BB.Common.loginModel;
+      const loginModel = AE.Shared.loginModel;
       return loginModel.authentication()
         .then(isLoggedIn => {
           if (isLoggedIn) {

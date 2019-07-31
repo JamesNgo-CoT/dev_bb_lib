@@ -9,7 +9,7 @@ AppEssentials.Backbone.Components.LoginButtonView = AppEssentials.Backbone.View.
 			this.afterRenderOnce = () => {
 				this.el.querySelector('a').focus();
 			};
-			AppEssentials.Backbone.Common.loginModel.logout();
+			AppEssentials.Shared.loginModel.logout();
 		}
 	},
 
@@ -20,7 +20,7 @@ AppEssentials.Backbone.Components.LoginButtonView = AppEssentials.Backbone.View.
 	// Overriden Methods
 
 	initialize(options) {
-		const loginModel = AppEssentials.Backbone.Common.loginModel;
+		const loginModel = AppEssentials.Shared.loginModel;
 		this.listenTo(loginModel, 'change', () => {
 			this.render();
 		});
@@ -29,7 +29,7 @@ AppEssentials.Backbone.Components.LoginButtonView = AppEssentials.Backbone.View.
 	},
 
 	render() {
-		const loginModel = AppEssentials.Backbone.Common.loginModel;
+		const loginModel = AppEssentials.Shared.loginModel;
 		if (loginModel.isLoggedIn()) {
 			const cotUser = loginModel.get('cotUser');
 			const name = cotUser ? [cotUser.lastName, cotUser.firstName].filter(str => str).join(', ') : loginModel.get('userID');

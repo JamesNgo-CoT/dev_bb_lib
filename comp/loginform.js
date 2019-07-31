@@ -68,7 +68,7 @@ AppEssentials.Backbone.Components.LoginFormView = AppEssentials.Backbone.Compone
 	// Overriden Methods
 
 	initialize(options) {
-		this.model = AppEssentials.Backbone.Common.loginModel;
+		this.model = AppEssentials.Shared.loginModel;
 		AppEssentials.Backbone.Components.FormView.prototype.initialize.call(this, options)
 	},
 

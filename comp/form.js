@@ -75,7 +75,9 @@ AppEssentials.Backbone.Components.FormView = AppEssentials.Backbone.View.extend(
 			}
 
 			const model = new AppEssentials.Backbone.Components.AlertModel({ message });
-			const alertView = new AppEssentials.Backbone.Components.AlertModel({ model });
+			const alertView = new AppEssentials.Backbone.Components.AlertView({ model });
+
+			console.log(alertView, alertView.el);
 			parentNode.insertBefore(alertView.el, parentNode.firstChild);
 			alertView.render();
 		},

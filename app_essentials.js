@@ -469,7 +469,7 @@ Backbone.sync = function (method, model, options = {}) {
 	options.headers.Accept = options.headers.Accept || 'application/json; charset=utf-8';
 
 	if (!options.headers.Authorization) {
-		const loginModel = AppEssentials.Backbone.Common.loginModel;
+		const loginModel = AppEssentials.Shared.loginModel;
 		if (loginModel && loginModel !== model && !loginModel.isNew()) {
 			options.headers.Authorization = `AuthSession ${loginModel.get(loginModel.idAttribute)}`;
 		}
@@ -768,6 +768,11 @@ AppEssentials.Backbone.LoginModel = AppEssentials.Backbone.Model.extend({
 			.finally(() => this.clear());
 	},
 
+	fetch(options) {
+		this.lastFetched = new Date();
+		return AppEssentials.Backbone.Model.prototype.fetch.call(this, options);
+	},
+
 	initialize(attributes, options) {
 		this.on(`change:${this.idAttribute}`, () => {
 			if (!this.isNew()) {
@@ -806,12 +811,18 @@ AppEssentials.Backbone.LoginModel = AppEssentials.Backbone.Model.extend({
 
 	// New Methods
 
-	authentication(options) {
+	authentication(options = {}) {
 		return Promise.resolve()
 			.then(() => {
 				if (!this.isLoggedIn()) {
 					return false;
 				} else {
+					if (options.ignoreLastFetched !== true && this.lastFetched
+						&& Math.abs((new Date()).getTime() - this.lastFetched.getTime()) / 1000 / 60 / 60 < 20) {
+
+						return this.isLoggedIn();
+					}
+
 					return this.fetch(options)
 						.then(() => {
 							return this.isLoggedIn();
@@ -839,11 +850,9 @@ AppEssentials.Backbone.LoginModel = AppEssentials.Backbone.Model.extend({
 // Backbone Common Namespace
 ////////////////////////////////////////////////////////////////////////////////
 
-AppEssentials.Backbone.Common = AppEssentials.Backbone.Common || {};
+AppEssentials.Shared = AppEssentials.Shared || {};
 
-AppEssentials.Backbone.Common.loginModel = null;
-
-AppEssentials.Backbone.Common.dialogView = null;
+AppEssentials.Shared.loginModel = null;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Backbone Components Namespace

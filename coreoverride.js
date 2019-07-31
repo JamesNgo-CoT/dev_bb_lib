@@ -158,7 +158,7 @@ if (window.CotForm) {
                   }
 
                   if (typeof field.choices === 'string') {
-                    return ajax({ url: choices })
+                    return ajax({ url: field.choices })
                       .then((data) => {
                         field.choices = data;
                       });

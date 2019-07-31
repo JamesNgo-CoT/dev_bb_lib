@@ -175,12 +175,14 @@ $.ajaxSetup({
 })
 
 function ajax(options) {
+  console.log('AJAX');
   return new Promise((resolve, reject) => {
     $.ajax(options)
       .then((data, textStatus, jqXHR) => {
         resolve(data);
       }, (jqXHR, textStatus, errorThrown) => {
-        reject(errorThrown);
+        console.log(jqXHR)
+        reject(jqXHR.responseJSON);
       });
   });
 }

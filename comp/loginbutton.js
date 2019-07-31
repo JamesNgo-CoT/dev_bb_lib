@@ -15,7 +15,7 @@ const LoginButtonView = Backbone.BaseView.extend({
       this.render();
     });
 
-    Backbone.BaseModel.prototype.initialize.call(this, options);
+    Backbone.BaseView.prototype.initialize.call(this, options);
   },
 
   render() {

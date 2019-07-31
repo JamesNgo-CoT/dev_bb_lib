@@ -227,7 +227,7 @@ const DatatableView = Backbone.BaseView.extend({
             case 'date':
               return `${orderBy} ${config.dir}`;
             case 'function':
-              const func = stringToFunction(datatableDefinition.columns[index].orderBy);
+              const func = stringToFunction(datatableDefinition.columns[config.column].orderBy);
               return func(config, orderBy, datatableDefinition.columns[config.column]);
             default:
               return `tolower(${orderBy}) ${config.dir}`;
@@ -372,8 +372,10 @@ const FilteredDatatableView = DatatableView.extend({
             input.setAttribute('aria-label', `Filter by ${title}`);
             input.setAttribute('data-column-index', index);
 
-            const eventHandler = () => {
-              this.datatable.columns(index).search(input.value).draw();
+            const eventHandler = (event) => {
+              if (event.which !== 9) {
+                this.datatable.columns(index).search(input.value).draw();
+              }
             }
 
             input.addEventListener('change', eventHandler);

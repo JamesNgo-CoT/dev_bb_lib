@@ -42,3 +42,20 @@ npm install datatables.net datatables.net-bs datatables.net-buttons datatables.n
 <script src="<!-- @echo SRC_PATH -->/scripts/lib/comp/loginform.js"></script>
 <script src="<!-- @echo SRC_PATH -->/scripts/lib/comp/datatable.js"></script>
 ```
+
+## PACKAGE JSON
+
+``` JSON
+{
+  ...
+
+  "coreConfig": {
+    "includeFormValidation": true,
+    ...
+    "includeModeling": true,
+  }
+}
+```
+
+## MAIN JAVASCRIPT
+

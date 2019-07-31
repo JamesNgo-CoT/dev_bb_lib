@@ -1,200 +1,129 @@
-const DialogModel = Backbone.BaseModel.extend({
-  defaults: {
-    id: '',
-    size: 'lg',
-    heading: 'HEADING',
-    body: 'BODY',
-    footer: '<button class="btn btn-primary" data-dismiss="modal">Close</button>'
-  }
+/* global AppEssentials */
+
+AppEssentials.Backbone.Components.DialogModel = AppEssentials.Backbone.Model.extend({
+
+	// Overriden Property
+
+	defaults: {
+		id: '',
+		size: 'lg',
+		heading: 'HEADING',
+		body: 'BODY',
+		footer: '<button class="btn btn-primary" data-dismiss="modal">Close</button>'
+	}
 });
 
-const DialogView = Backbone.BaseView.extend(
-  {
-    attributes: {
-      tabindex: '-1',
-      role: 'dialog',
+AppEssentials.Backbone.Components.DialogView = AppEssentials.Backbone.View.extend({
 
-      'aria-hidden': 'true',
-      'aria-modal': 'true'
-    },
+	// Overriden Properties
 
-    dialog: null,
-    headerTitleSpan: null,
-    body: null,
-    footer: null,
+	attributes: {
+		tabindex: '-1',
+		role: 'dialog',
 
-    events: {
-      ['shown.bs.modal']() {
-        this.el.querySelector('.modal-title span[tabindex="-1"]').focus();
-      },
+		'aria-hidden': 'true',
+		'aria-modal': 'true'
+	},
 
-      ['hidden.bs.modal']() {
-        this.trigger('hidden.bs.modal');
-      }
-    },
+	events: {
+		['shown.bs.modal']() {
+			this.el.querySelector('.modal-title span[tabindex="-1"]').focus();
+		},
 
-    initialize(options) {
-      this.listenTo(options.model, 'change', () => {
-        this.render();
-      });
+		['hidden.bs.modal']() {
+			this.trigger('hidden.bs.modal');
+		}
+	},
 
-      Backbone.BaseView.prototype.initialize.call(this, options);
-    },
+	// Overriden Methods
 
-    render() {
-      while (this.el.firstChild) {
-        this.el.removeChild(this.el.firstChild);
-      }
+	initialize(options) {
+		this.listenTo(options.model, 'change', () => {
+			this.render();
+		});
 
-      this.el.classList.add('modal', 'fade');
+		AppEssentials.Backbone.View.prototype.initialize.call(this, options);
+	},
 
-      this.el.setAttribute('aria-labelledby', `${this.id}_title`);
+	render() {
+		while (this.el.firstChild) {
+			this.el.removeChild(this.el.firstChild);
+		}
 
-      this.dialog = this.el.appendChild(document.createElement('div'));
-      this.dialog.classList.add('modal-dialog');
-      if (this.model.has('size')) {
-        this.dialog.classList.add(`modal-${this.model.get('size')}`);
-      }
-      this.dialog.setAttribute('role', 'document');
+		this.el.classList.add('modal', 'fade');
 
-      const content = this.dialog.appendChild(document.createElement('div'))
-      content.classList.add('modal-content');
+		if (this.model.has('id')) {
+			this.el.setAttribute('aria-labelledby', `${this.model.get('id')}_title`);
+		}
 
-      const header = content.appendChild(document.createElement('div'));
-      header.classList.add('modal-header');
+		const dialog = this.el.appendChild(document.createElement('div'));
+		dialog.classList.add('modal-dialog');
+		if (this.model.has('size')) {
+			dialog.classList.add(`modal-${this.model.get('size')}`);
+		}
+		dialog.setAttribute('role', 'document');
 
-      const headerButton = header.appendChild(document.createElement('button'));
-      headerButton.classList.add('close');
-      headerButton.setAttribute('type', 'button');
-      headerButton.setAttribute('aria-label', 'Close');
-      headerButton.setAttribute('data-dismiss', 'modal');
-      headerButton.innerHTML = '<span aria-hidden="true">&times;</span>';
+		const content = dialog.appendChild(document.createElement('div'));
+		content.classList.add('modal-content');
 
-      const headerTitle = header.appendChild(document.createElement('div'));
-      headerTitle.classList.add('modal-title');
-      headerTitle.setAttribute('id', `${this.id}_title`);
-      headerTitle.setAttribute('role', 'heading');
-      headerTitle.setAttribute('aria-level', '2');
+		const header = content.appendChild(document.createElement('div'));
+		header.classList.add('modal-header');
 
-      this.headerTitleSpan = headerTitle.appendChild(document.createElement('span'));
-      this.headerTitleSpan.setAttribute('tabindex', '-1');
+		const headerButton = header.appendChild(document.createElement('button'));
+		headerButton.classList.add('close');
+		headerButton.setAttribute('type', 'button');
+		headerButton.setAttribute('aria-label', 'Close');
+		headerButton.setAttribute('data-dismiss', 'modal');
+		headerButton.innerHTML = '<span aria-hidden="true">&times;</span>';
 
-      const headingContent = this.model.get('heading');
-      if (typeof headingContent === 'string') {
-        this.headerTitleSpan.innerHTML = headingContent;
-      } else if (headingContent instanceof HTMLElement) {
-        this.headerTitleSpan.appendChild(headingContent);
-      }
+		const headerTitle = header.appendChild(document.createElement('div'));
+		headerTitle.classList.add('modal-title');
+		if (this.model.has('id')) {
+			headerTitle.setAttribute('id', `${this.model.get('id')}_title`);
+		}
+		headerTitle.setAttribute('role', 'heading');
+		headerTitle.setAttribute('aria-level', '2');
 
-      this.body = content.appendChild(document.createElement('div'));
-      this.body.classList.add('modal-body');
+		const headerTitleSpan = headerTitle.appendChild(document.createElement('span'));
+		headerTitleSpan.setAttribute('tabindex', '-1');
 
-      const bodyContent = this.model.get('body');
-      if (typeof bodyContent === 'string') {
-        this.body.innerHTML = bodyContent;
-      } else if (bodyContent instanceof HTMLElement) {
-        this.body.appendChild(bodyContent);
-      }
+		const headingContent = this.model.get('heading');
+		if (typeof headingContent === 'string') {
+			headerTitleSpan.innerHTML = headingContent;
+		} else if (headingContent instanceof HTMLElement) {
+			headerTitleSpan.appendChild(headingContent);
+		}
 
-      this.footer = content.appendChild(document.createElement('div'));
-      this.footer.classList.add('modal-footer');
+		const body = content.appendChild(document.createElement('div'));
+		body.classList.add('modal-body');
 
-      const footerContent = this.model.get('footer');
-      if (typeof footerContent === 'string') {
-        this.footer.innerHTML = footerContent;
-      } else if (footerContent instanceof HTMLElement) {
-        this.footer.appendChild(footerContent);
-      }
+		const bodyContent = this.model.get('body');
+		if (typeof bodyContent === 'string') {
+			body.innerHTML = bodyContent;
+		} else if (bodyContent instanceof HTMLElement) {
+			body.appendChild(bodyContent);
+		}
 
-      return Backbone.BaseView.prototype.render.call(this);
-    },
+		const footer = content.appendChild(document.createElement('div'));
+		footer.classList.add('modal-footer');
 
-    open() {
-      this.$el.modal('show');
-    },
+		const footerContent = this.model.get('footer');
+		if (typeof footerContent === 'string') {
+			footer.innerHTML = footerContent;
+		} else if (footerContent instanceof HTMLElement) {
+			footer.appendChild(footerContent);
+		}
 
-    close() {
-      this.$el.modal('hide');
-    }
-  },
-  {
-    singleton() {
-      if (!DialogView.singletonView) {
-        DialogView.singletonView = new DialogView(DialogView.singletonOptions);
-        if (DialogView.singletonParent) {
-          DialogView.singletonParent.appendChild(DialogView.singletonView.el);
-          DialogView.singletonView.render();
-        }
-      }
+		return AppEssentials.Backbone.View.prototype.render.call(this);
+	},
 
-      return DialogView.singletonView;
-    },
-    singletonView: null,
-    singletonParent: document.body,
-    singletonOptions: { model: new DialogModel() },
+	// New Methods
 
-    showLogin(authModel) {
-      return new Promise((resolve) => {
-        authModel = authModel || Backbone.authModel;
+	close() {
+		this.$el.modal('hide');
+	},
 
-        const DialogLoginFormView = LoginFormView.extend({
-          className: 'loginFormView'
-        });
-
-        const loginForm = new DialogLoginFormView({ model: authModel });
-
-        const footer = document.createElement('div');
-
-        const loginButton = footer.appendChild(document.createElement('button'));
-        loginButton.textContent = 'Login';
-        loginButton.setAttribute('type', 'button');
-        loginButton.classList.add('btn', 'btn-primary');
-
-        footer.appendChild(document.createTextNode(' '));
-
-        const cancelButton = footer.appendChild(document.createElement('button'));
-        cancelButton.textContent = 'Cancel';
-        cancelButton.setAttribute('type', 'button');
-        cancelButton.setAttribute('data-dismiss', 'modal');
-        cancelButton.classList.add('btn', 'btn-default');
-
-        const dialogView = DialogView.singleton();
-        dialogView.close();
-        dialogView.model.set({
-          size: 'md',
-          heading: 'User Login',
-          body: loginForm.el,
-          footer
-        });
-
-        loginForm.on('loggingin', () => {
-          loginButton.setAttribute('disabled', '');
-          loginButton.textContent = 'Verifying information';
-        });
-
-        loginForm.on('failed', () => {
-          loginButton.removeAttribute('disabled');
-          loginButton.textContent = 'Login';
-        });
-
-        loginForm.on('success', () => {
-          loginButton.removeAttribute('disabled');
-          loginButton.textContent = 'Login';
-          dialogView.close();
-        });
-
-        loginButton.addEventListener('click', () => {
-          loginForm.el.querySelector('.btn-login').click();
-        });
-
-        dialogView.on('hidden.bs.modal', () => {
-          resolve(authModel.isLoggedIn());
-        });
-
-        loginForm.render().then(() => {
-          dialogView.open();
-        });
-      });
-    }
-  }
-);
+	open() {
+		this.$el.modal('show');
+	}
+});

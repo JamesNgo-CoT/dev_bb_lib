@@ -1,47 +1,60 @@
-const LoginButtonView = Backbone.BaseView.extend({
-  loginFragment: 'login',
+/* global _ AppEssentials Backbone */
 
-  events: {
-    ['click button']() {
-      this.afterRenderOnce = () => {
-        this.el.querySelector('a').focus();
-      };
-      this.model.logout();
-    }
-  },
+AppEssentials.Backbone.Components.LoginButtonView = AppEssentials.Backbone.View.extend({
 
-  initialize(options) {
-    this.listenTo(options.model, 'change', () => {
-      this.render();
-    });
+	// Overriden Property
 
-    Backbone.BaseModel.prototype.initialize.call(this, options);
-  },
+	events: {
+		['click button']() {
+			this.afterRenderOnce = () => {
+				this.el.querySelector('a').focus();
+			};
+			AppEssentials.Backbone.Common.loginModel.logout();
+		}
+	},
 
-  render() {
-    if (this.model.isLoggedIn()) {
-      const cotUser = this.model.get('cotUser');
-      const name = cotUser ? [cotUser.lastName, cotUser.firstName].filter(str => str).join(', ') : this.model.get('userID');
-      this.el.innerHTML = `<button type="button" class="btn btn-default">Logout: <strong>${name}</strong></button>`;
-    } else {
-      const fullLoginFragment = _.result(this, 'fullLoginFragment');
-      this.el.innerHTML = `<a href="#${fullLoginFragment}" class="btn btn-default">Login</a>`;
-    }
+	// New Property
 
-    return Backbone.BaseView.prototype.render.call(this);
-  },
+	loginFragment: 'login',
 
-  fullLoginFragment() {
-    const loginFragment = _.result(this, 'loginFragment');
-    const query = Backbone.History.started ? `?${toQueryString({ redirect: Backbone.history.getFragment() })}` : '';
-    return `${loginFragment}${query}`;
-  },
+	// Overriden Methods
 
-  hide() {
-    this.el.classList.add('hide');
-  },
+	initialize(options) {
+		const loginModel = AppEssentials.Backbone.Common.loginModel;
+		this.listenTo(loginModel, 'change', () => {
+			this.render();
+		});
 
-  show() {
-    this.el.classList.remove('hide');
-  }
+		AppEssentials.Backbone.View.prototype.initialize.call(this, options);
+	},
+
+	render() {
+		const loginModel = AppEssentials.Backbone.Common.loginModel;
+		if (loginModel.isLoggedIn()) {
+			const cotUser = loginModel.get('cotUser');
+			const name = cotUser ? [cotUser.lastName, cotUser.firstName].filter(str => str).join(', ') : loginModel.get('userID');
+			this.el.innerHTML = `<button type="button" class="btn btn-default">Logout: <strong>${name}</strong></button>`;
+		} else {
+			const fullLoginFragment = _.result(this, 'fullLoginFragment');
+			this.el.innerHTML = `<a href="#${fullLoginFragment}" class="btn btn-default">Login</a>`;
+		}
+
+		return AppEssentials.Backbone.View.prototype.render.call(this);
+	},
+
+	// New Methods
+
+	fullLoginFragment() {
+		const loginFragment = _.result(this, 'loginFragment');
+		const query = Backbone.History.started ? `?${AppEssentials.Utilities.toQueryString({ redirect: Backbone.history.getFragment() })}` : '';
+		return `${loginFragment}${query}`;
+	},
+
+	hide() {
+		this.el.classList.add('hide');
+	},
+
+	show() {
+		this.el.classList.remove('hide');
+	}
 });

@@ -1,95 +1,96 @@
 
-/* global _ AE */
+/* global _ AppEssentials jQuery */
 
-////////////////////////////////////////////////////////////////////////////////
-// VIEW
-////////////////////////////////////////////////////////////////////////////////
+AppEssentials.Backbone.Components.FormView = AppEssentials.Backbone.View.extend(
+	{
 
-const FormView = AE.BB.View.extend(
-  {
-    render() {
-      while (this.el.firstChild) {
-        this.removeChild(this.el.firstChild);
-      }
+		// Overriden Method
 
-      let formDefinition = _.result(this, 'formDefinition');
+		render() {
+			while (this.el.firstChild) {
+				this.removeChild(this.el.firstChild);
+			}
 
-      return Promise.resolve()
-        .then(() => {
-          if (typeof formDefinition === 'string') {
-            return ajax({
-              url: formDefinition
-            }).then((data) => {
-              formDefinition = data;
-            });
-          }
-        })
-        .then(() => {
-          if (formDefinition.scripts) {
-            return loadScripts(...formDefinition.scripts);
-          }
-        })
-        .then(() => {
-          formDefinition.id = _.result(formDefinition, 'id') || FormView.uniqueId();
-          formDefinition.rootPath = _.result(formDefinition, 'rootPath') || _.result(this, 'rootPath');
-          formDefinition.useBinding = true;
+			let formDefinition = _.result(this, 'formDefinition');
 
-          // NOTE: Weird behaviour - Assigning functions into existing object changes the function's context to previous instance...
-          // So I had to keep function in temporary object by duplicating the definition.
-          const tempFormDefinition = {};
-          for (const key in formDefinition) {
-            if (formDefinition.hasOwnProperty(key)) {
-              tempFormDefinition[key] = formDefinition[key];
-            }
-          }
+			return Promise.resolve()
+				.then(() => {
+					if (typeof formDefinition === 'string') {
+						return AppEssentials.Utilities.doAjax({
+							url: formDefinition
+						}).then((data) => {
+							formDefinition = data;
+						});
+					}
+				})
+				.then(() => {
+					if (formDefinition.scripts) {
+						return AppEssentials.Utilities.loadScripts(...formDefinition.scripts);
+					}
+				})
+				.then(() => {
+					formDefinition.id = _.result(formDefinition, 'id') || AppEssentials.Backbone.Components.FormView.uniqueId();
+					formDefinition.rootPath = _.result(formDefinition, 'rootPath') || _.result(this, 'rootPath');
+					formDefinition.useBinding = true;
 
-          tempFormDefinition.success = formDefinition.success || ((event) => {
-            event.preventDefault();
-            this.success();
-            return false;
-          });
+					// NOTE: Weird behaviour - Assigning functions into existing object changes the function's context to previous instance...
+					// So I had to keep function in temporary object by duplicating the definition.
+					const tempFormDefinition = {};
+					for (const key in formDefinition) {
+						if ({}.hasOwnProperty.call(formDefinition, key)) {
+							tempFormDefinition[key] = formDefinition[key];
+						}
+					}
 
-          this.cotForm = new CotForm(tempFormDefinition);
-          this.cotForm.setModel(this.model);
-          this.cotForm.setView(this);
+					tempFormDefinition.success = formDefinition.success || ((event) => {
+						event.preventDefault();
+						this.success();
+						return false;
+					});
 
-          return Promise.resolve()
-            .then(() => {
-              return this.cotForm.render({ target: this.el });
-            })
-            .then(() => {
-              this.form = this.el.querySelector('form');
-              this.formValidator = $(this.form).data('formValidation');
+					this.cotForm = new window.CotForm(tempFormDefinition);
+					this.cotForm.setModel(this.model);
+					this.cotForm.setView(this);
 
-              return Backbone.BaseView.prototype.render.call(this);
-            });
-        });
-    },
+					return Promise.resolve()
+						.then(() => {
+							return this.cotForm.render({ target: this.el });
+						})
+						.then(() => {
+							this.form = this.el.querySelector('form');
+							this.formValidator = jQuery(this.form).data('formValidation');
 
-    success() {
-      this.trigger('success');
-    },
+							return AppEssentials.Backbone.View.prototype.render.call(this);
+						});
+				});
+		},
 
-    showAlert(message, sectionIndex) {
-      let parentNode = this.form;
+		// New Methods
 
-      if (sectionIndex != null) {
-        parentNode = parentNode.querySelectorAll('.panel-body')[sectionIndex];
-      }
+		showAlert(message, sectionIndex) {
+			let parentNode = this.form;
 
-      const model = new AlertModel({ message });
-      const alertView = new AlertView({ model });
-      parentNode.insertBefore(alertView.el, parentNode.firstChild);
-      alertView.render();
-    }
-  },
-  {
-    uniqueId() {
-      if (FormView._uniqueId == null) {
-        FormView._uniqueId = 0;
-      }
+			if (sectionIndex != null) {
+				parentNode = parentNode.querySelectorAll('.panel-body')[sectionIndex];
+			}
 
-      return `FormView_${FormView._uniqueId++}`;
-    }
-  }
+			const model = new AppEssentials.Backbone.Components.AlertModel({ message });
+			const alertView = new AppEssentials.Backbone.Components.AlertModel({ model });
+			parentNode.insertBefore(alertView.el, parentNode.firstChild);
+			alertView.render();
+		},
+
+		success() {
+			this.trigger('success');
+		}
+	},
+	{
+		uniqueId() {
+			if (AppEssentials.Backbone.Components.FormView._uniqueId == null) {
+				AppEssentials.Backbone.Components.FormView._uniqueId = 0;
+			}
+
+			return `FormView_${AppEssentials.Backbone.Components.FormView._uniqueId++}`;
+		}
+	}
 );

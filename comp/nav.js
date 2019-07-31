@@ -1,140 +1,149 @@
-const NavItemModel = Backbone.BaseModel.extend({
-  defaults: {
-    title: 'Untitled',
-    fragment: '',
-    isActive: false,
-    isVisible: true,
-    requiresLogin: false
-  }
+/* global AppEssentials */
+
+AppEssentials.Backbone.Components.NavItemModel = AppEssentials.Backbone.Model.extend({
+
+	// Overriden Property
+
+	defaults: {
+		title: 'Untitled',
+		fragment: '',
+		isActive: false,
+		isVisible: true,
+		requiresLogin: false
+	}
 });
 
-////////////////////////////////////////////////////////////////////////////////
+AppEssentials.Backbone.Components.NavItemView = AppEssentials.Backbone.View.extend({
 
-const NavItemView = Backbone.BaseView.extend({
-  tagName: 'li',
-  attributes: { role: 'presentation' },
+	// Overriden Properties
 
-  initialize(options) {
-    this.listenTo(options.model, 'change', () => {
-      this.render();
-    });
+	attributes: { role: 'presentation' },
 
-    Backbone.BaseView.prototype.initialize.call(this, options);
-  },
+	tagName: 'li',
 
-  render() {
-    this.el.innerHTML = `<a href="#${this.model.escape('fragment')}">${this.model.escape('title')}</a>`;
 
-    if (this.model.get('isActive')) {
-      this.el.classList.add('active');
-    } else {
-      this.el.classList.remove('active');
-    }
+	// Overriden Methods
 
-    if (this.model.get('isVisible')) {
-      this.el.classList.remove('hide');
-    } else {
-      this.el.classList.add('hide');
-    }
+	initialize(options) {
+		this.listenTo(options.model, 'change', () => {
+			this.render();
+		});
 
-    return Backbone.BaseView.prototype.render.call(this);
-  }
+		AppEssentials.Backbone.View.prototype.initialize.call(this, options);
+	},
+
+	render() {
+		this.el.innerHTML = `<a href="#${this.model.escape('fragment')}">${this.model.escape('title')}</a>`;
+
+		if (this.model.get('isActive')) {
+			this.el.classList.add('active');
+		} else {
+			this.el.classList.remove('active');
+		}
+
+		if (this.model.get('isVisible')) {
+			this.el.classList.remove('hide');
+		} else {
+			this.el.classList.add('hide');
+		}
+
+		return AppEssentials.Backbone.View.prototype.render.call(this);
+	}
 });
 
-////////////////////////////////////////////////////////////////////////////////
+AppEssentials.Backbone.Components.AuthyNavItemView = AppEssentials.Backbone.Components.NavItemView.extend({
+	initialize(options) {
+		const loginModel = AppEssentials.Backbone.Common.loginModel;
+		this.listenTo(loginModel, 'change', () => {
+			this.render();
+		});
 
-const AuthyNavItemView = NavItemView.extend({
-  initialize(options) {
-    const authModel = _.result(this, 'authModel') || _.result(Backbone, 'authModel');
-    this.listenTo(authModel, 'change', () => {
-      this.render();
-    });
+		return AppEssentials.Backbone.Components.NavItemView.prototype.initialize.call(this, options);
+	},
 
-    return NavItemView.prototype.initialize.call(this, options);
-  },
-
-  render() {
-    return NavItemView.prototype.render.call(this)
-      .then(() => {
-        const authModel = _.result(this, 'authModel') || _.result(Backbone, 'authModel');
-        if (authModel && authModel.isLoggedIn()) {
-          this.el.classList.remove('hide');
-        } else {
-          this.el.classList.add('hide');
-        }
-      });
-  }
+	render() {
+		return AppEssentials.Backbone.Components.NavItemView.prototype.render.call(this)
+			.then(() => {
+				const loginModel = AppEssentials.Backbone.Common.loginModel;
+				if (loginModel && loginModel.isLoggedIn()) {
+					this.el.classList.remove('hide');
+				} else {
+					this.el.classList.add('hide');
+				}
+			});
+	}
 });
 
-////////////////////////////////////////////////////////////////////////////////
+AppEssentials.Backbone.Components.NavCollection = AppEssentials.Backbone.Collection.extend({
 
-const NavCollection = Backbone.BaseCollection.extend({
-  model: NavItemModel,
+	// Override Property
 
-  setActive(index) {
-    this.each((model, modelIndex) => {
-      if (index === modelIndex) {
-        model.set('isActive', true);
-      } else {
-        model.set('isActive', false);
-      }
-    });
-  }
+	model: AppEssentials.Backbone.Components.NavItemModel,
+
+	// New Method
+
+	setActive(index) {
+		this.each((model, modelIndex) => {
+			if (index === modelIndex) {
+				model.set('isActive', true);
+			} else {
+				model.set('isActive', false);
+			}
+		});
+	}
 });
 
-////////////////////////////////////////////////////////////////////////////////
+AppEssentials.Backbone.Components.NavView = AppEssentials.Backbone.View.extend({
+	attributes: { role: 'navigation' },
 
-const NavView = Backbone.BaseView.extend({
-  attributes: { role: 'navigation' },
+	initialize(options) {
+		this.navItems = [];
 
-  initialize(options) {
-    this.navItems = [];
+		this.listenTo(options.collection, 'update', () => {
+			this.render();
+		});
 
-    this.listenTo(options.collection, 'update', () => {
-      this.render();
-    });
+		AppEssentials.Backbone.View.prototype.initialize.call(this, options);
+	},
 
-    Backbone.BaseView.prototype.initialize.call(this, options);
-  },
+	removeNavItems() {
+		this.navItems.forEach(navItem => navItem.remove());
+		this.navItems = [];
+	},
 
-  removeNavItems() {
-    this.navItems.forEach(navItem => navItem.remove());
-    this.navItems = [];
-  },
+	remove() {
+		this.removeNavItems();
+		AppEssentials.Backbone.View.prototype.remove.call(this);
+	},
 
-  remove() {
-    this.removeNavItems();
-    Backbone.BaseView.prototype.remove.call(this);
-  },
+	render() {
+		this.removeNavItems();
+		while (this.el.firstChild) {
+			this.removeChild(this.el.firstChild);
+		}
 
-  render() {
-    this.removeNavItems();
-    while (this.el.firstChild) {
-      this.removeChild(this.el.firstChild);
-    }
+		const wrapper = this.el.appendChild(document.createElement('ul'));
+		wrapper.classList.add('nav', 'nav-tabs');
 
-    const wrapper = this.el.appendChild(document.createElement('ul'));
-    wrapper.classList.add('nav', 'nav-tabs');
+		const navItemViewRenderPromises = [];
+		this.collection.each(model => {
+			let navItemView;
+			if (model.get('requiresLogin')) {
+				navItemView = new AppEssentials.Backbone.Components.AuthyNavItemView({ model, authModel: this.authModel });
+			} else {
+				navItemView = new AppEssentials.Backbone.Components.NavItemView({ model });
+			}
 
-    const navItemViewRenderPromises = [];
-    this.collection.each(model => {
-      let navItemView;
-      if (model.get('requiresLogin')) {
-        navItemView = new AuthyNavItemView({ model, authModel: this.authModel });
-      } else {
-        navItemView = new NavItemView({ model });
-      }
+			if (navItemView) {
+				wrapper.appendChild(navItemView.el);
+				navItemViewRenderPromises.push(navItemView.render());
+				this.navItems.push(navItemView);
+			}
+		});
 
-      if (navItemView) {
-        wrapper.appendChild(navItemView.el);
-        navItemViewRenderPromises.push(navItemView.render());
-        this.navItems.push(navItemView);
-      }
-    });
-
-    return Promise.all(navItemViewRenderPromises)
-      .then(() => {
-        return Backbone.BaseView.prototype.render.call(this);
-      });
-  }
+		return Promise.all(navItemViewRenderPromises)
+			.then(() => {
+				return AppEssentials.Backbone.View.prototype.render.call(this);
+			});
+	}
 });

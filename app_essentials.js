@@ -25,8 +25,8 @@ AppEssentials.Utilities.doAjax = (options) => {
 		jQuery.ajax(options)
 			.then(data => {
 				resolve(data);
-			}, (jqXHR, textStatus, errorThrown) => {
-				reject(errorThrown);
+			}, (jqXHR) => {
+				reject(jqXHR.responseJSON);
 			});
 	});
 };
@@ -67,13 +67,6 @@ AppEssentials.Utilities.loadScripts = (...urls) => {
 	}
 
 	return Promise.all(promises);
-};
-
-AppEssentials.Utilities.buildSingleton = (ClassObject) => {
-	if (!ClassObject._singleton) {
-		ClassObject._singleton = new ClassObject();
-	}
-	return ClassObject._singleton;
 };
 
 AppEssentials.Utilities.stringToFunction = (str) => {
@@ -476,9 +469,9 @@ Backbone.sync = function (method, model, options = {}) {
 	options.headers.Accept = options.headers.Accept || 'application/json; charset=utf-8';
 
 	if (!options.headers.Authorization) {
-		const authModel = _.result(model, 'authModel') || _.result(Backbone, 'authModel');
-		if (authModel && authModel !== model && !authModel.isNew()) {
-			options.headers.Authorization = `AuthSession ${authModel.get(authModel.idAttribute)}`;
+		const loginModel = AppEssentials.Backbone.Common.loginModel;
+		if (loginModel && loginModel !== model && !loginModel.isNew()) {
+			options.headers.Authorization = `AuthSession ${loginModel.get(loginModel.idAttribute)}`;
 		}
 	}
 
@@ -522,16 +515,16 @@ AppEssentials.Backbone.restartRouter = () => {
 
 AppEssentials.Backbone.Router = Backbone.Router.extend({
 
-	// Property
-
-	defaultFragment: 'home',
-
-	// Route Properties
+	// Overridden Property
 
 	routes: {
 		['home']() { },
 		'*default': 'routeDefault'
 	},
+
+	// New Properties
+
+	defaultFragment: 'home',
 
 	routeDefault() {
 		if (typeof this.lastFragment === 'string') {
@@ -544,7 +537,7 @@ AppEssentials.Backbone.Router = Backbone.Router.extend({
 		}
 	},
 
-	// Methods
+	// Overridden Methods
 
 	execute(callback, args, name) {
 		let cleanupFunctionReturnValue;
@@ -604,7 +597,7 @@ AppEssentials.Backbone.Router = Backbone.Router.extend({
 
 AppEssentials.Backbone.Model = Backbone.Model.extend({
 
-	// Properties
+	// Overriden Property
 
 	url() {
 		if (this.isNew()) {
@@ -617,15 +610,13 @@ AppEssentials.Backbone.Model = Backbone.Model.extend({
 		return `${base.replace(/\/$/, '')}('${encodeURIComponent(id)}')`;
 	},
 
-	webStorage: Backbone.webStorageItems.webStorage,
+	// New Properties
+
+	webStorage: localStorage,
 
 	webStorageKey: null,
 
-	// Methods
-
-	hasChanged() {
-		return this.lastSyncData != JSON.stringify(this.toJSON());
-	},
+	// Overriden Method
 
 	sync(method, model, options) {
 		return Backbone.Model.prototype.sync.call(this, method, model, options)
@@ -635,11 +626,17 @@ AppEssentials.Backbone.Model = Backbone.Model.extend({
 			});
 	},
 
+	// New Methods
+
+	hasChanged() {
+		return this.lastSyncData != JSON.stringify(this.toJSON());
+	},
+
 	webStorageFetch(options) {
 		const webStorage = _.result(options, 'webStorage') || _.result(this, 'webStorage');
 		const webStorageKey = _.result(options, 'webStorageKey') || _.result(this, 'webStorageKey');
 
-		this.set(webStorage.getItem(webStorageKey), options);
+		this.set(JSON.parse(webStorage.getItem(webStorageKey)), options);
 	},
 
 	webStorageSave(options) {
@@ -659,15 +656,17 @@ AppEssentials.Backbone.Model = Backbone.Model.extend({
 
 AppEssentials.Backbone.Collection = Backbone.Collection.extend({
 
-	// Property
+	// Overriden Property
 
 	model: AppEssentials.Backbone.Model,
 
-	webStorage: Backbone.webStorageItems.webStorage,
+	// New Properties
+
+	webStorage: localStorage,
 
 	webStorageKey: null,
 
-	// Methods
+	// Overriden Methods
 
 	fetch(options) {
 		if (options && options.query) {
@@ -683,6 +682,20 @@ AppEssentials.Backbone.Collection = Backbone.Collection.extend({
 		}
 
 		return Backbone.Collection.prototype.parse.call(this, response, options);
+	},
+
+	sync(method, model, options) {
+		return Backbone.Model.prototype.sync.call(this, method, model, options)
+			.then((returnValue) => {
+				this.lastSyncData = JSON.stringify(model.toJSON());
+				return returnValue;
+			});
+	},
+
+	// New Methods
+
+	hasChanged() {
+		return this.lastSyncData != JSON.stringify(this.toJSON());
 	},
 
 	webStorageFetch(options) {
@@ -709,7 +722,7 @@ AppEssentials.Backbone.Collection = Backbone.Collection.extend({
 
 AppEssentials.Backbone.View = Backbone.View.extend({
 
-	// Methods
+	// Overriden Methods
 
 	render() {
 		let linkButton = this.el.querySelector('a.btn:not([role="button"])');
@@ -727,99 +740,110 @@ AppEssentials.Backbone.View = Backbone.View.extend({
 		return Promise.resolve();
 	},
 
+	// New Method
+
 	swapWith(nextView) {
 		return AppEssentials.Utilities.swapView(this.el.parentNode, this, nextView);
 	}
 });
 
-AppEssentials.Backbone.LoginModel = AppEssentials.Backbone.Model.extend(
-	{
+AppEssentials.Backbone.LoginModel = AppEssentials.Backbone.Model.extend({
 
-		// Properties
+	// Overriden Properties
 
-		app: 'cotapp',
+	idAttribute: 'sid',
 
-		idAttribute: 'sid',
+	webStorageKey: 'Auth',
 
-		// Methods
+	// New Property
 
-		initialize(attributes, options) {
-			this.on(`change:${this.idAttribute}`, () => {
-				if (!this.isNew()) {
-					this.webStorageSave();
-				} else {
-					this.webStorageDestroy();
-				}
-			});
+	app: 'cotapp',
 
-			this.webStorageFetch();
+	// Overriden Methods
 
+	destroy(options = {}) {
+		options.headers = options.headers || {};
+		options.headers.Authorization = this.get('userID');
+		return AppEssentials.Backbone.Model.prototype.destroy.call(this, options)
+			.finally(() => this.clear());
+	},
+
+	initialize(attributes, options) {
+		this.on(`change:${this.idAttribute}`, () => {
 			if (!this.isNew()) {
-				this.fetch()
-					.catch(() => {
-						this.clear();
-					});
+				this.webStorageSave();
+			} else {
+				this.webStorageDestroy();
 			}
+		});
 
-			AppEssentials.Backbone.Model.prototype.initialize.call(this, attributes, options);
-		},
+		this.webStorageFetch();
 
-		parse(response, options) {
-			delete response.pwd;
-			return AppEssentials.Backbone.Model.prototype.parse.call(this, response, options);
-		},
-
-		save(attributes = {}, options = {}) {
-			const {
-				app = _.result(this, 'app'),
-				user = this.get('user'),
-				pwd = this.get('pwd')
-			} = attributes;
-
-			return AppEssentials.Backbone.Model.prototype.save.call(this, { app, user, pwd }, options);
-		},
-
-		destroy(options = {}) {
-			options.headers = options.headers || {};
-			options.headers.Authorization = this.get('userID');
-			return AppEssentials.Backbone.Model.prototype.destroy.call(this, options)
-				.finally(() => this.clear());
-		},
-
-		login(options) {
-			return this.save(options);
-		},
-
-		logout() {
-			return this.destroy();
-		},
-
-		isLoggedIn() {
-			return !this.isNew();
-		},
-
-		authentication(options) {
-			return Promise.resolve()
-				.then(() => {
-					if (!this.isLoggedIn()) {
-						return false;
-					} else {
-						return this.fetch(options)
-							.then(() => {
-								return this.isLoggedIn();
-							}, () => {
-								return this.isLoggedIn();
-							})
-					}
+		if (!this.isNew()) {
+			this.fetch()
+				.catch(() => {
+					this.clear();
 				});
 		}
+
+		AppEssentials.Backbone.Model.prototype.initialize.call(this, attributes, options);
 	},
-	{
-		singleton() {
-			return AppEssentials.Utilities.buildSingleton(AppEssentials.Backbone.LoginModel);
-		}
+
+	parse(response, options) {
+		delete response.pwd;
+		return AppEssentials.Backbone.Model.prototype.parse.call(this, response, options);
+	},
+
+	save(attributes = {}, options = {}) {
+		const {
+			app = _.result(this, 'app'),
+			user = this.get('user'),
+			pwd = this.get('pwd')
+		} = attributes;
+
+		return AppEssentials.Backbone.Model.prototype.save.call(this, { app, user, pwd }, options);
+	},
+
+	// New Methods
+
+	authentication(options) {
+		return Promise.resolve()
+			.then(() => {
+				if (!this.isLoggedIn()) {
+					return false;
+				} else {
+					return this.fetch(options)
+						.then(() => {
+							return this.isLoggedIn();
+						}, () => {
+							return this.isLoggedIn();
+						})
+				}
+			});
+	},
+
+	isLoggedIn() {
+		return !this.isNew();
+	},
+
+	login(options) {
+		return this.save(options);
+	},
+
+	logout() {
+		return this.destroy();
 	}
-);
+});
+
+////////////////////////////////////////////////////////////////////////////////
+// Backbone Common Namespace
+////////////////////////////////////////////////////////////////////////////////
+
+AppEssentials.Backbone.Common = AppEssentials.Backbone.Common || {};
+
+AppEssentials.Backbone.Common.loginModel = null;
+
+AppEssentials.Backbone.Common.dialogView = null;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Backbone Components Namespace

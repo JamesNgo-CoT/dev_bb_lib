@@ -1,12 +1,8 @@
-/* global _ AE jQuery */
+/* global _ AppsEssentials jQuery */
 
-////////////////////////////////////////////////////////////////////////////////
-// VIEW
-////////////////////////////////////////////////////////////////////////////////
+AppsEssentials.Backbone.Components.DatatableView = AppsEssentials.Backbone.View.extend({
 
-AE.BB.Comp.DatatableView = AE.BB.View.extend({
-
-	// Property
+	// New Properties
 
 	buttons() {
 		return [{
@@ -74,18 +70,11 @@ AE.BB.Comp.DatatableView = AE.BB.View.extend({
 		return _.result(this.collection, 'webStorage') || localStorage;
 	},
 
-	// Methods
-
-	removeDatatable() {
-		if (this.datatable) {
-			this.datatable.destroy();
-			this.datatable = null;
-		}
-	},
+	// Overriden Methods
 
 	remove() {
 		this.removeDatatable();
-		AE.BB.View.prototype.remove.call(this);
+		AppsEssentials.Backbone.View.prototype.remove.call(this);
 	},
 
 	render() {
@@ -101,7 +90,7 @@ AE.BB.Comp.DatatableView = AE.BB.View.extend({
 		return Promise.resolve()
 			.then(() => {
 				if (typeof datatableDefinition === 'string') {
-					return AE.Util.doAjax({
+					return AppsEssentials.Util.doAjax({
 						url: datatableDefinition
 					}).then((data) => {
 						datatableDefinition = data;
@@ -110,7 +99,7 @@ AE.BB.Comp.DatatableView = AE.BB.View.extend({
 			})
 			.then(() => {
 				if (datatableDefinition.scripts) {
-					return AE.Util.loadScripts(...datatableDefinition.scripts);
+					return AppsEssentials.Util.loadScripts(...datatableDefinition.scripts);
 				}
 			})
 			.then(() => {
@@ -124,8 +113,8 @@ AE.BB.Comp.DatatableView = AE.BB.View.extend({
 
 				// Convert string to functions.
 				datatableDefinition.columns.forEach(column => {
-					column.render = AE.Util.stringToFunction(column.render);
-					column.createdCell = AE.Util.stringToFunction(column.createdCell);
+					column.render = AppsEssentials.Util.stringToFunction(column.render);
+					column.createdCell = AppsEssentials.Util.stringToFunction(column.createdCell);
 				});
 
 				// NOTE: Weird behaviour - Assigning functions into existing object changes the function's context to previous instance...
@@ -150,9 +139,18 @@ AE.BB.Comp.DatatableView = AE.BB.View.extend({
 						this.datatable = jQuery(table).DataTable(tempDatatableDefinition);
 
 						// Run super.render(), returns a Promise.
-						return AE.BB.View.prototype.render.call(this);
+						return AppsEssentials.Backbone.View.prototype.render.call(this);
 					});
 			});
+	},
+
+	// New Methods
+
+	removeDatatable() {
+		if (this.datatable) {
+			this.datatable.destroy();
+			this.datatable = null;
+		}
 	},
 
 	stateSaveCallback(settings, data) {
@@ -198,16 +196,16 @@ AE.BB.Comp.DatatableView = AE.BB.View.extend({
 							case 'boolean':
 							case 'number':
 							case 'date':
-								return `${column.data} eq ${AE.Util.escapeODataValue(column.search.value)}`;
+								return `${column.data} eq ${AppsEssentials.Util.escapeODataValue(column.search.value)}`;
 
 							case 'function':
-								return `(${AE.Util.stringToFunction(datatableDefinition.columns[index].filter)(column, datatableDefinition.columns[index])})`;
+								return `(${AppsEssentials.Util.stringToFunction(datatableDefinition.columns[index].filter)(column, datatableDefinition.columns[index])})`;
 
 							default:
 								return `(${column.search.value
 									.split(' ')
 									.filter((value, index, array) => value && array.indexOf(value) === index)
-									.map(value => `contains(tolower(${column.data}),'${AE.Util.escapeODataValue(value.toLowerCase())}')`)
+									.map(value => `contains(tolower(${column.data}),'${AppsEssentials.Util.escapeODataValue(value.toLowerCase())}')`)
 									.join(' and ')})`;
 						}
 					} else {
@@ -229,7 +227,7 @@ AE.BB.Comp.DatatableView = AE.BB.View.extend({
 						case 'date':
 							return `${orderBy} ${config.dir}`;
 						case 'function':
-							return AE.Util.stringToFunction(datatableDefinition.columns[config.column].orderBy)(config, orderBy, datatableDefinition.columns[config.column]);
+							return AppsEssentials.Util.stringToFunction(datatableDefinition.columns[config.column].orderBy)(config, orderBy, datatableDefinition.columns[config.column]);
 						default:
 							return `tolower(${orderBy}) ${config.dir}`;
 					}
@@ -286,7 +284,7 @@ AE.BB.Comp.DatatableView = AE.BB.View.extend({
 ////////////////////////////////////////////////////////////////////////////////
 
 /* exported FilteredDatatableView */
-AE.BB.Comp.FilteredDatatableView = AE.BB.Comp.DatatableView.extend({
+AppsEssentials.Backbone.Components.FilteredDatatableView = AppsEssentials.Backbone.Components.DatatableView.extend({
 
 	// Property
 
@@ -295,7 +293,7 @@ AE.BB.Comp.FilteredDatatableView = AE.BB.Comp.DatatableView.extend({
 	// Methods
 
 	initComplete(settings, json) {
-		AE.BB.Comp.DatatableView.prototype.initComplete.call(this, settings, json);
+		AppsEssentials.Backbone.Components.DatatableView.prototype.initComplete.call(this, settings, json);
 
 		for (let index = 0, length = this.datatable.columns()[0].length; index < length; index++) {
 			const field = this.el.querySelector(`[data-column-index="${index}"]`);
@@ -306,7 +304,7 @@ AE.BB.Comp.FilteredDatatableView = AE.BB.Comp.DatatableView.extend({
 	},
 
 	buildTable() {
-		return AE.BB.Comp.DatatableView.prototype.buildTable.call(this)
+		return AppsEssentials.Backbone.Components.DatatableView.prototype.buildTable.call(this)
 			.then(newTable => {
 				const thead = newTable.appendChild(document.createElement('thead'));
 
@@ -348,7 +346,7 @@ AE.BB.Comp.FilteredDatatableView = AE.BB.Comp.DatatableView.extend({
 									choices = choices.slice(0);
 								} else if (typeof choices === 'string') {
 									option0.innerHTML = `Loading&hellip;`;
-									return AE.Util.doAjax({
+									return AppsEssentials.Util.doAjax({
 										url: choices
 									}).then((data) => {
 										choices = data;
@@ -357,7 +355,7 @@ AE.BB.Comp.FilteredDatatableView = AE.BB.Comp.DatatableView.extend({
 							})
 							.then(() => {
 								if (column.choicesMap) {
-									column.choicesMap = AE.Util.stringToFunction(column.choicesMap);
+									column.choicesMap = AppsEssentials.Util.stringToFunction(column.choicesMap);
 									choices = column.choicesMap(choices);
 								}
 

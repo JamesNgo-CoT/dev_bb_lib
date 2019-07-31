@@ -2,7 +2,7 @@
 
 AppEssentials.Backbone.Components.AlertModel = AppEssentials.Backbone.Model.extend({
 
-	// Property
+	// Overriden Property
 
 	defaults: {
 		message: null
@@ -11,13 +11,13 @@ AppEssentials.Backbone.Components.AlertModel = AppEssentials.Backbone.Model.exte
 
 AppEssentials.Backbone.Components.AlertView = AppEssentials.Backbone.View.extend({
 
-	// Properties
+	// Overriden Properties
 
 	attributes: { role: 'alert' },
 
 	className: 'alert-danger',
 
-	// Methods
+	// Overriden Methods
 
 	initialize(options) {
 		this.listenTo(options.model, 'change', () => {
@@ -25,10 +25,6 @@ AppEssentials.Backbone.Components.AlertView = AppEssentials.Backbone.View.extend
 		});
 
 		AppEssentials.Backbone.View.prototype.initialize.call(this, options);
-	},
-
-	close() {
-		this.el.querySelector('button[data-dismiss="alert"]').click();
 	},
 
 	render() {
@@ -57,5 +53,11 @@ AppEssentials.Backbone.Components.AlertView = AppEssentials.Backbone.View.extend
 		}
 
 		return AppEssentials.Backbone.View.prototype.render.call(this);
-	}
+	},
+
+	// New Method
+
+	close() {
+		this.el.querySelector('button[data-dismiss="alert"]').click();
+	},
 });

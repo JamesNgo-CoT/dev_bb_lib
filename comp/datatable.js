@@ -90,7 +90,7 @@ AppEssentials.Backbone.Components.DatatableView = AppEssentials.Backbone.View.ex
 		return Promise.resolve()
 			.then(() => {
 				if (typeof datatableDefinition === 'string') {
-					return AppEssentials.Util.doAjax({
+					return AppEssentials.Utilities.doAjax({
 						url: datatableDefinition
 					}).then((data) => {
 						datatableDefinition = data;
@@ -99,7 +99,7 @@ AppEssentials.Backbone.Components.DatatableView = AppEssentials.Backbone.View.ex
 			})
 			.then(() => {
 				if (datatableDefinition.scripts) {
-					return AppEssentials.Util.loadScripts(...datatableDefinition.scripts);
+					return AppEssentials.Utilities.loadScripts(...datatableDefinition.scripts);
 				}
 			})
 			.then(() => {
@@ -113,8 +113,8 @@ AppEssentials.Backbone.Components.DatatableView = AppEssentials.Backbone.View.ex
 
 				// Convert string to functions.
 				datatableDefinition.columns.forEach(column => {
-					column.render = AppEssentials.Util.stringToFunction(column.render);
-					column.createdCell = AppEssentials.Util.stringToFunction(column.createdCell);
+					column.render = AppEssentials.Utilities.stringToFunction(column.render);
+					column.createdCell = AppEssentials.Utilities.stringToFunction(column.createdCell);
 				});
 
 				// NOTE: Weird behaviour - Assigning functions into existing object changes the function's context to previous instance...
@@ -196,16 +196,16 @@ AppEssentials.Backbone.Components.DatatableView = AppEssentials.Backbone.View.ex
 							case 'boolean':
 							case 'number':
 							case 'date':
-								return `${column.data} eq ${AppEssentials.Util.escapeODataValue(column.search.value)}`;
+								return `${column.data} eq ${AppEssentials.Utilities.escapeODataValue(column.search.value)}`;
 
 							case 'function':
-								return `(${AppEssentials.Util.stringToFunction(datatableDefinition.columns[index].filter)(column, datatableDefinition.columns[index])})`;
+								return `(${AppEssentials.Utilities.stringToFunction(datatableDefinition.columns[index].filter)(column, datatableDefinition.columns[index])})`;
 
 							default:
 								return `(${column.search.value
 									.split(' ')
 									.filter((value, index, array) => value && array.indexOf(value) === index)
-									.map(value => `contains(tolower(${column.data}),'${AppEssentials.Util.escapeODataValue(value.toLowerCase())}')`)
+									.map(value => `contains(tolower(${column.data}),'${AppEssentials.Utilities.escapeODataValue(value.toLowerCase())}')`)
 									.join(' and ')})`;
 						}
 					} else {
@@ -227,7 +227,7 @@ AppEssentials.Backbone.Components.DatatableView = AppEssentials.Backbone.View.ex
 						case 'date':
 							return `${orderBy} ${config.dir}`;
 						case 'function':
-							return AppEssentials.Util.stringToFunction(datatableDefinition.columns[config.column].orderBy)(config, orderBy, datatableDefinition.columns[config.column]);
+							return AppEssentials.Utilities.stringToFunction(datatableDefinition.columns[config.column].orderBy)(config, orderBy, datatableDefinition.columns[config.column]);
 						default:
 							return `tolower(${orderBy}) ${config.dir}`;
 					}
@@ -346,7 +346,7 @@ AppEssentials.Backbone.Components.FilteredDatatableView = AppEssentials.Backbone
 									choices = choices.slice(0);
 								} else if (typeof choices === 'string') {
 									option0.innerHTML = `Loading&hellip;`;
-									return AppEssentials.Util.doAjax({
+									return AppEssentials.Utilities.doAjax({
 										url: choices
 									}).then((data) => {
 										choices = data;
@@ -355,7 +355,7 @@ AppEssentials.Backbone.Components.FilteredDatatableView = AppEssentials.Backbone
 							})
 							.then(() => {
 								if (column.choicesMap) {
-									column.choicesMap = AppEssentials.Util.stringToFunction(column.choicesMap);
+									column.choicesMap = AppEssentials.Utilities.stringToFunction(column.choicesMap);
 									choices = column.choicesMap(choices);
 								}
 

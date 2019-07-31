@@ -9,7 +9,7 @@ AppEssentials.Backbone.Components.LoginButtonView = AppEssentials.Backbone.View.
 			this.afterRenderOnce = () => {
 				this.el.querySelector('a').focus();
 			};
-			AppEssentials.Shared.loginModel.logout();
+			AppEssentials.Backbone.LoginModel.instance.logout();
 		}
 	},
 
@@ -20,23 +20,27 @@ AppEssentials.Backbone.Components.LoginButtonView = AppEssentials.Backbone.View.
 	// Overriden Methods
 
 	initialize(options) {
-		const loginModel = AppEssentials.Shared.loginModel;
-		this.listenTo(loginModel, 'change', () => {
-			this.render();
-		});
+		if (AppEssentials.Backbone.LoginModel.instance) {
+			this.listenTo(AppEssentials.Backbone.LoginModel.instance, 'change', () => {
+				this.render();
+			});
+		}
 
 		AppEssentials.Backbone.View.prototype.initialize.call(this, options);
 	},
 
 	render() {
-		const loginModel = AppEssentials.Shared.loginModel;
-		if (loginModel.isLoggedIn()) {
-			const cotUser = loginModel.get('cotUser');
-			const name = cotUser ? [cotUser.lastName, cotUser.firstName].filter(str => str).join(', ') : loginModel.get('userID');
-			this.el.innerHTML = `<button type="button" class="btn btn-default">Logout: <strong>${name}</strong></button>`;
+		if (AppEssentials.Backbone.LoginModel.instance) {
+			if (AppEssentials.Backbone.LoginModel.instance.isLoggedIn()) {
+				const cotUser = AppEssentials.Backbone.LoginModel.instance.get('cotUser');
+				const name = cotUser ? [cotUser.lastName, cotUser.firstName].filter(str => str).join(', ') : AppEssentials.Backbone.LoginModel.instance.get('userID');
+				this.el.innerHTML = `<button type="button" class="btn btn-default">Logout: <strong>${name}</strong></button>`;
+			} else {
+				const fullLoginFragment = _.result(this, 'fullLoginFragment');
+				this.el.innerHTML = `<a href="#${fullLoginFragment}" class="btn btn-default">Login</a>`;
+			}
 		} else {
-			const fullLoginFragment = _.result(this, 'fullLoginFragment');
-			this.el.innerHTML = `<a href="#${fullLoginFragment}" class="btn btn-default">Login</a>`;
+			this.el.innerHTML = '';
 		}
 
 		return AppEssentials.Backbone.View.prototype.render.call(this);

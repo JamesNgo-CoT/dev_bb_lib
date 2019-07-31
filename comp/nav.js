@@ -53,10 +53,12 @@ AppEssentials.Backbone.Components.NavItemView = AppEssentials.Backbone.View.exte
 
 AppEssentials.Backbone.Components.AuthyNavItemView = AppEssentials.Backbone.Components.NavItemView.extend({
 	initialize(options) {
-		const loginModel = AppEssentials.Shared.loginModel;
-		this.listenTo(loginModel, 'change', () => {
-			this.render();
-		});
+		if (AppEssentials.Backbone.LoginModel.instance) {
+			this.listenTo(AppEssentials.Backbone.LoginModel.instance, 'change', () => {
+				this.render();
+			});
+		}
+
 
 		return AppEssentials.Backbone.Components.NavItemView.prototype.initialize.call(this, options);
 	},
@@ -64,8 +66,7 @@ AppEssentials.Backbone.Components.AuthyNavItemView = AppEssentials.Backbone.Comp
 	render() {
 		return AppEssentials.Backbone.Components.NavItemView.prototype.render.call(this)
 			.then(() => {
-				const loginModel = AppEssentials.Shared.loginModel;
-				if (loginModel && loginModel.isLoggedIn()) {
+				if (AppEssentials.Backbone.LoginModel.instance && AppEssentials.Backbone.LoginModel.instance.isLoggedIn()) {
 					this.el.classList.remove('hide');
 				} else {
 					this.el.classList.add('hide');

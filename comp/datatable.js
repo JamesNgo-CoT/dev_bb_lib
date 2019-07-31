@@ -172,8 +172,7 @@ AppEssentials.Backbone.Components.DatatableView = AppEssentials.Backbone.View.ex
 	},
 
 	ajax(data, callback, settings) {
-		const serverSide = settings.oFeatures.bServerSide;
-		if (serverSide) {
+		if (settings.oFeatures.bServerSide) {
 			const datatableDefinition = _.result(this, 'datatableDefinition');
 			const { columns, draw, length, order, search, start } = data;
 			const queryObject = {};
@@ -252,13 +251,28 @@ AppEssentials.Backbone.Components.DatatableView = AppEssentials.Backbone.View.ex
 
 			this.collection.fetch({ query: queryArray.join('&') })
 				.then((data) => {
+					this.showAlert('success');
 					callback({
 						data: this.collection.toJSON(),
 						draw,
 						recordsTotal: data['@odata.count'],
 						recordsFiltered: data['@odata.count']
 					});
-				}, () => {
+				}, () => { //(error) => {
+					// console.log('ERROR', error);
+					// IF error.resolveWithLogin
+					// IF 401 - no access
+					// ELSE
+
+					// if () {
+
+					// } else if() {
+					// 	// SHOW ACCESS ERROR
+					// } else {
+					// 	// SHOW ERROR
+					// }
+
+
 					callback({ data: [], draw, recordsTotal: 0, recordsFiltered: 0 });
 				});
 		}
@@ -278,7 +292,18 @@ AppEssentials.Backbone.Components.DatatableView = AppEssentials.Backbone.View.ex
 		if (this.datatable) {
 			this.datatable.ajax.reload(callback, resetPaging);
 		}
-	}
+	},
+
+	showAlert(message, className = 'alert-danger') {
+		let parentNode = this.el;
+
+		const model = new AppEssentials.Backbone.Components.AlertModel({ message });
+		const AlertView = AppEssentials.Backbone.Components.AlertView.extend({ className });
+		const alertView = new AlertView({ model });
+
+		parentNode.insertBefore(alertView.el, parentNode.firstChild);
+		alertView.render();
+	},
 });
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -342,7 +367,6 @@ AppEssentials.Backbone.Components.FilteredDatatableView = AppEssentials.Backbone
 						const promise = Promise.resolve()
 							.then(() => {
 								if (Array.isArray(choices)) {
-									// choices = choices.slice(choices);
 									choices = choices.slice(0);
 								} else if (typeof choices === 'string') {
 									option0.innerHTML = `Loading&hellip;`;

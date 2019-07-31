@@ -67,7 +67,7 @@ AppEssentials.Backbone.Components.FormView = AppEssentials.Backbone.View.extend(
 
 		// New Methods
 
-		showAlert(message, sectionIndex) {
+		showAlert(message, sectionIndex, className = 'alert-danger') {
 			let parentNode = this.form;
 
 			if (sectionIndex != null) {
@@ -75,15 +75,24 @@ AppEssentials.Backbone.Components.FormView = AppEssentials.Backbone.View.extend(
 			}
 
 			const model = new AppEssentials.Backbone.Components.AlertModel({ message });
-			const alertView = new AppEssentials.Backbone.Components.AlertView({ model });
+			const AlertView = AppEssentials.Backbone.Components.AlertView.extend({ className });
+			const alertView = new AlertView({ model });
 
-			console.log(alertView, alertView.el);
 			parentNode.insertBefore(alertView.el, parentNode.firstChild);
 			alertView.render();
 		},
 
 		success() {
-			this.trigger('success');
+			this.model.fetch()
+				.then(() => {
+					this.trigger('success');
+				}, () => {
+
+					// if sid problem
+					// else
+
+					this.trigger('failed');
+				});
 		}
 	},
 	{

@@ -1,8 +1,9 @@
+/* global _ $ doAjax loadScripts AlertModel AlertView BaseView */
 
-/* global _ AppEssentials jQuery */
-
-AppEssentials.Backbone.Components.FormView = AppEssentials.Backbone.View.extend(
+/* exported FormView */
+const FormView = BaseView.extend(
 	{
+		attributes: { 'data-view': 'FormView' },
 
 		// Overriden Method
 
@@ -16,21 +17,24 @@ AppEssentials.Backbone.Components.FormView = AppEssentials.Backbone.View.extend(
 			return Promise.resolve()
 				.then(() => {
 					if (typeof formDefinition === 'string') {
-						return AppEssentials.Utilities.doAjax({
+						return doAjax({
 							url: formDefinition
-						}).then((data) => {
+						}).then(({ data }) => {
 							formDefinition = data;
 						});
 					}
 				})
 				.then(() => {
 					if (formDefinition.scripts) {
-						return AppEssentials.Utilities.loadScripts(...formDefinition.scripts);
+						return loadScripts(...formDefinition.scripts);
 					}
 				})
 				.then(() => {
-					formDefinition.id = _.result(formDefinition, 'id') || AppEssentials.Backbone.Components.FormView.uniqueId();
-					formDefinition.rootPath = _.result(formDefinition, 'rootPath') || _.result(this, 'rootPath');
+					formDefinition.id =
+						_.result(formDefinition, 'id') || FormView.uniqueId();
+					formDefinition.rootPath =
+						_.result(formDefinition, 'rootPath') ||
+						_.result(this, 'rootPath');
 					formDefinition.useBinding = true;
 
 					// NOTE: Weird behaviour - Assigning functions into existing object changes the function's context to previous instance...
@@ -42,11 +46,13 @@ AppEssentials.Backbone.Components.FormView = AppEssentials.Backbone.View.extend(
 						}
 					}
 
-					tempFormDefinition.success = formDefinition.success || ((event) => {
-						event.preventDefault();
-						this.success();
-						return false;
-					});
+					tempFormDefinition.success =
+						formDefinition.success ||
+						(event => {
+							event.preventDefault();
+							this.success();
+							return false;
+						});
 
 					this.cotForm = new window.CotForm(tempFormDefinition);
 					this.cotForm.setModel(this.model);
@@ -58,9 +64,9 @@ AppEssentials.Backbone.Components.FormView = AppEssentials.Backbone.View.extend(
 						})
 						.then(() => {
 							this.form = this.el.querySelector('form');
-							this.formValidator = jQuery(this.form).data('formValidation');
+							this.formValidator = $(this.form).data('formValidation');
 
-							return AppEssentials.Backbone.View.prototype.render.call(this);
+							return BaseView.prototype.render.call(this);
 						});
 				});
 		},
@@ -71,37 +77,44 @@ AppEssentials.Backbone.Components.FormView = AppEssentials.Backbone.View.extend(
 			let parentNode = this.form;
 
 			if (sectionIndex != null) {
-				parentNode = parentNode.querySelectorAll('.panel-body')[sectionIndex];
+				parentNode = parentNode.querySelectorAll('.panel-body')[
+					sectionIndex
+				];
 			}
 
-			const model = new AppEssentials.Backbone.Components.AlertModel({ message });
-			const AlertView = AppEssentials.Backbone.Components.AlertView.extend({ className });
-			const alertView = new AlertView({ model });
+			const alertView = new AlertView({
+				className,
+				model: new AlertModel({
+					message
+				})
+			});
 
 			parentNode.insertBefore(alertView.el, parentNode.firstChild);
 			alertView.render();
 		},
 
 		success() {
-			this.model.fetch()
-				.then(() => {
-					this.trigger('success');
-				}, () => {
-
-					// if sid problem
-					// else
-
-					this.trigger('failed');
-				});
+			if (this.model) {
+				this.model.save().then(
+					() => {
+						this.trigger('success');
+					},
+					() => {
+						this.trigger('failed');
+					}
+				);
+			} else {
+				this.trigger('success');
+			}
 		}
 	},
 	{
 		uniqueId() {
-			if (AppEssentials.Backbone.Components.FormView._uniqueId == null) {
-				AppEssentials.Backbone.Components.FormView._uniqueId = 0;
+			if (FormView._uniqueId == null) {
+				FormView._uniqueId = 0;
 			}
 
-			return `FormView_${AppEssentials.Backbone.Components.FormView._uniqueId++}`;
+			return `FormView_${FormView._uniqueId++}`;
 		}
 	}
 );

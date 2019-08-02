@@ -1,0 +1,10 @@
+@import "./form.scss";
+%LoginFormView {
+	@extend %FormView;
+}
+
+%LoginFormViewRoot {
+	[data-view="LoginFormView"] {
+		@extend %LoginFormView;
+	}
+}

@@ -1,62 +1,69 @@
 %FormView {
-  .cot-form {
-    .form-group {
-      margin-bottom: 1rem;
+	.cot-form {
+		.form-group {
+			margin-bottom: 1rem;
 
-      .form-control {
-        .horizontal {
-          padding: 0 1rem 0 0;
-        }
-      }
-    }
+			.form-control {
+				.horizontal {
+					padding: 0 1rem 0 0;
+				}
+			}
+		}
 
-    .panel {
-      margin-bottom: 1rem;
+		.panel {
+			margin-bottom: 1rem;
 
-      .repeatControl {
-        .repeatControl-wrapper {
-          .repeatControl-title {
-            margin-bottom: 1rem;
+			.repeatControl {
+				.repeatControl-wrapper {
+					.repeatControl-title {
+						margin-bottom: 1rem;
 
-            h4 {
-              margin: 0;
-            }
-          }
+						h4 {
+							margin: 0;
+						}
+					}
 
-          .repeatControl-sets {
-            .repeatControl-set {
-              border-top: 1px solid #ccc;
-              padding-top: 1rem;
+					.repeatControl-sets {
+						.repeatControl-set {
+							border-top: 1px solid #ccc;
+							padding-top: 1rem;
 
-              .repeatControl-set-button {
-                margin-bottom: 1rem;
+							.repeatControl-set-button {
+								margin-bottom: 1rem;
 
-                button {
-                  .glyphicon {
-                    display: none;
-                  }
-                }
-              }
-            }
-          }
+								button {
+									.glyphicon {
+										display: none;
+									}
+								}
+							}
+						}
+					}
 
-          .repeatControl-button {
-            border-top: 1px solid #ccc;
-            margin-bottom: 1rem;
-            padding-top: 1rem;
+					.repeatControl-button {
+						border-top: 1px solid #ccc;
+						margin-bottom: 1rem;
+						padding-top: 1rem;
 
-            button {
-              .glyphicon {
-                display: none;
-              }
-            }
-          }
-        }
-      }
-    }
-  }
+						button {
+							.glyphicon {
+								display: none;
+							}
+						}
+					}
+				}
+			}
+		}
+	}
 
-  button {
-    margin: 0;
-  }
+	button {
+		margin: 0;
+	}
 }
+
+%FormViewRoot {
+	[data-view="FormView"] {
+		@extend %FormView;
+	}
+}
+

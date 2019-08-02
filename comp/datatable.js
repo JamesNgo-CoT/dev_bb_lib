@@ -1,31 +1,37 @@
-/* global _ AppEssentials jQuery */
+/* global _ $ doAjax escapeODataValue loadScripts stringToFunction BaseView AlertModel */
 
-AppEssentials.Backbone.Components.DatatableView = AppEssentials.Backbone.View.extend({
-
-	// New Properties
+/* exported DatatableView */
+const DatatableView = BaseView.extend({
+	attributes: { 'data-view': 'DatatableView' },
 
 	buttons() {
-		return [{
-			extend: 'copyHtml5',
-			exportOptions: { columns: ':visible:not(.excludeFromButtons)' },
-			title: this.title
-		}, {
-			extend: 'csvHtml5',
-			exportOptions: { columns: ':visible:not(.excludeFromButtons)' },
-			title: this.title
-		}, {
-			extend: 'excelHtml5',
-			exportOptions: { columns: ':visible:not(.excludeFromButtons)' },
-			title: this.title
-		}, {
-			extend: 'pdfHtml5',
-			exportOptions: { columns: ':visible:not(.excludeFromButtons)' },
-			title: this.title
-		}, {
-			extend: 'print',
-			exportOptions: { columns: ':visible:not(.excludeFromButtons)' },
-			title: this.title
-		}]
+		return [
+			{
+				extend: 'copyHtml5',
+				exportOptions: { columns: ':visible:not(.excludeFromButtons)' },
+				title: this.title
+			},
+			{
+				extend: 'csvHtml5',
+				exportOptions: { columns: ':visible:not(.excludeFromButtons)' },
+				title: this.title
+			},
+			{
+				extend: 'excelHtml5',
+				exportOptions: { columns: ':visible:not(.excludeFromButtons)' },
+				title: this.title
+			},
+			{
+				extend: 'pdfHtml5',
+				exportOptions: { columns: ':visible:not(.excludeFromButtons)' },
+				title: this.title
+			},
+			{
+				extend: 'print',
+				exportOptions: { columns: ':visible:not(.excludeFromButtons)' },
+				title: this.title
+			}
+		];
 	},
 
 	datatableDefinition: {
@@ -47,7 +53,9 @@ AppEssentials.Backbone.Components.DatatableView = AppEssentials.Backbone.View.ex
 				data: 'id',
 				orderable: false,
 				render(data) {
-					return '<a href=#apps/' + data + ' class=btn btn-default>View</a>';
+					return (
+						'<a href=#apps/' + data + ' class=btn btn-default>View</a>'
+					);
 				},
 				searchable: false,
 				width: '57px'
@@ -66,19 +74,20 @@ AppEssentials.Backbone.Components.DatatableView = AppEssentials.Backbone.View.ex
 
 	stateSave: false,
 
-	webStorage: function () {
-		return _.result(this.collection, 'webStorage') || localStorage;
+	webStorage: function() {
+		if (this.collection) {
+			return _.result(this.collection, 'webStorage') || localStorage;
+		} else {
+			return localStorage;
+		}
 	},
-
-	// Overriden Methods
 
 	remove() {
 		this.removeDatatable();
-		AppEssentials.Backbone.View.prototype.remove.call(this);
+		BaseView.prototype.remove.call(this);
 	},
 
 	render() {
-
 		// Clean up.
 		this.removeDatatable();
 		while (this.el.firstChild) {
@@ -90,31 +99,44 @@ AppEssentials.Backbone.Components.DatatableView = AppEssentials.Backbone.View.ex
 		return Promise.resolve()
 			.then(() => {
 				if (typeof datatableDefinition === 'string') {
-					return AppEssentials.Utilities.doAjax({
+					return doAjax({
 						url: datatableDefinition
-					}).then((data) => {
+					}).then(({ data }) => {
 						datatableDefinition = data;
 					});
 				}
 			})
 			.then(() => {
 				if (datatableDefinition.scripts) {
-					return AppEssentials.Utilities.loadScripts(...datatableDefinition.scripts);
+					return loadScripts(
+						...datatableDefinition.scripts
+					);
 				}
 			})
 			.then(() => {
-
 				// Finalize definition/configuration.
-				datatableDefinition.buttons = _.result(datatableDefinition, 'buttons') || _.result(this, 'buttons');
-				datatableDefinition.dom = _.result(datatableDefinition, 'dom') || _.result(this, 'dom');
-				datatableDefinition.stateSave = _.result(datatableDefinition, 'stateSave') || _.result(this, 'stateSave');
-				datatableDefinition.ajax = datatableDefinition.ajax || ((...args) => this.ajax(...args));
-				datatableDefinition.orderCellsTop = _.result(datatableDefinition, 'orderCellsTop') || _.result(this, 'orderCellsTop');
+				datatableDefinition.buttons =
+					_.result(datatableDefinition, 'buttons') ||
+					_.result(this, 'buttons');
+				datatableDefinition.dom =
+					_.result(datatableDefinition, 'dom') || _.result(this, 'dom');
+				datatableDefinition.stateSave =
+					_.result(datatableDefinition, 'stateSave') ||
+					_.result(this, 'stateSave');
+				datatableDefinition.ajax =
+					datatableDefinition.ajax || ((...args) => this.ajax(...args));
+				datatableDefinition.orderCellsTop =
+					_.result(datatableDefinition, 'orderCellsTop') ||
+					_.result(this, 'orderCellsTop');
 
 				// Convert string to functions.
 				datatableDefinition.columns.forEach(column => {
-					column.render = AppEssentials.Utilities.stringToFunction(column.render);
-					column.createdCell = AppEssentials.Utilities.stringToFunction(column.createdCell);
+					column.render = stringToFunction(
+						column.render
+					);
+					column.createdCell = stringToFunction(
+						column.createdCell
+					);
 				});
 
 				// NOTE: Weird behaviour - Assigning functions into existing object changes the function's context to previous instance...
@@ -126,21 +148,28 @@ AppEssentials.Backbone.Components.DatatableView = AppEssentials.Backbone.View.ex
 					}
 				}
 
-				tempDatatableDefinition.stateSaveCallback = datatableDefinition.stateSaveCallback || ((...args) => this.stateSaveCallback(...args));
-				tempDatatableDefinition.stateLoadCallback = datatableDefinition.stateLoadCallback || ((...args) => this.stateLoadCallback(...args));
-				tempDatatableDefinition.initComplete = datatableDefinition.initComplete || ((...args) => this.initComplete(...args));
+				tempDatatableDefinition.stateSaveCallback =
+					datatableDefinition.stateSaveCallback ||
+					((...args) => this.stateSaveCallback(...args));
+				tempDatatableDefinition.stateLoadCallback =
+					datatableDefinition.stateLoadCallback ||
+					((...args) => this.stateLoadCallback(...args));
+				tempDatatableDefinition.initComplete =
+					datatableDefinition.initComplete ||
+					((...args) => this.initComplete(...args));
 
 				// Build table.
-				return this.buildTable()
-					.then(table => {
-						this.el.appendChild(table);
+				return this.buildTable().then(table => {
+					this.el.appendChild(table);
 
-						// Create Datatable.
-						this.datatable = jQuery(table).DataTable(tempDatatableDefinition);
+					// Create Datatable.
+					this.datatable = $(table).DataTable(
+						tempDatatableDefinition
+					);
 
-						// Run super.render(), returns a Promise.
-						return AppEssentials.Backbone.View.prototype.render.call(this);
-					});
+					// Run super.render(), returns a Promise.
+					return BaseView.prototype.render.call(this);
+				});
 			});
 	},
 
@@ -154,15 +183,23 @@ AppEssentials.Backbone.Components.DatatableView = AppEssentials.Backbone.View.ex
 	},
 
 	stateSaveCallback(settings, data) {
-		const webStorage = _.result(this, 'webStorage') || _.result(this.collection, 'webStorage');
-		const webStorageKey = _.result(this, 'webStorageKey') || _.result(this.collection, 'webStorageKey');
+		const webStorage =
+			_.result(this, 'webStorage') ||
+			(this.collection ? _.result(this.collection, 'webStorage') : null);
+		const webStorageKey =
+			_.result(this, 'webStorageKey') ||
+			(this.collection ? _.result(this.collection, 'webStorageKey') : null);
 
 		webStorage.setItem(webStorageKey, JSON.stringify(data));
 	},
 
 	stateLoadCallback() {
-		const webStorage = _.result(this, 'webStorage') || _.result(this.collection, 'webStorage');
-		const webStorageKey = _.result(this, 'webStorageKey') || _.result(this.collection, 'webStorageKey');
+		const webStorage =
+			_.result(this, 'webStorage') ||
+			(this.collection ? _.result(this.collection, 'webStorage') : null);
+		const webStorageKey =
+			_.result(this, 'webStorageKey') ||
+			(this.collection ? _.result(this.collection, 'webStorageKey') : null);
 
 		try {
 			return JSON.parse(webStorage.getItem(webStorageKey));
@@ -190,21 +227,42 @@ AppEssentials.Backbone.Components.DatatableView = AppEssentials.Backbone.View.ex
 			// $filter
 			const filters = columns
 				.map((column, index) => {
-					if (column.searchable && column.search && column.search.value && column.search.value.trim()) {
+					if (
+						column.searchable &&
+						column.search &&
+						column.search.value &&
+						column.search.value.trim()
+					) {
 						switch (datatableDefinition.columns[index].type) {
 							case 'boolean':
 							case 'number':
 							case 'date':
-								return `${column.data} eq ${AppEssentials.Utilities.escapeODataValue(column.search.value)}`;
+								return `${
+									column.data
+								} eq ${escapeODataValue(
+									column.search.value
+								)}`;
 
 							case 'function':
-								return `(${AppEssentials.Utilities.stringToFunction(datatableDefinition.columns[index].filter)(column, datatableDefinition.columns[index])})`;
+								return `(${stringToFunction(
+									datatableDefinition.columns[index].filter
+								)(column, datatableDefinition.columns[index])})`;
 
 							default:
 								return `(${column.search.value
 									.split(' ')
-									.filter((value, index, array) => value && array.indexOf(value) === index)
-									.map(value => `contains(tolower(${column.data}),'${AppEssentials.Utilities.escapeODataValue(value.toLowerCase())}')`)
+									.filter(
+										(value, index, array) =>
+											value && array.indexOf(value) === index
+									)
+									.map(
+										value =>
+											`contains(tolower(${
+												column.data
+											}),'${escapeODataValue(
+												value.toLowerCase()
+											)}')`
+									)
 									.join(' and ')})`;
 						}
 					} else {
@@ -218,19 +276,28 @@ AppEssentials.Backbone.Components.DatatableView = AppEssentials.Backbone.View.ex
 
 			// $orderby
 			if (order.length > 0) {
-				queryObject['$orderby'] = order.map(config => {
-					let orderBy = columns[config.column].data;
-					switch (datatableDefinition.columns[config.column].type) {
-						case 'boolean':
-						case 'number':
-						case 'date':
-							return `${orderBy} ${config.dir}`;
-						case 'function':
-							return AppEssentials.Utilities.stringToFunction(datatableDefinition.columns[config.column].orderBy)(config, orderBy, datatableDefinition.columns[config.column]);
-						default:
-							return `tolower(${orderBy}) ${config.dir}`;
-					}
-				}).filter(value => value).join(',');
+				queryObject['$orderby'] = order
+					.map(config => {
+						let orderBy = columns[config.column].data;
+						switch (datatableDefinition.columns[config.column].type) {
+							case 'boolean':
+							case 'number':
+							case 'date':
+								return `${orderBy} ${config.dir}`;
+							case 'function':
+								return stringToFunction(
+									datatableDefinition.columns[config.column].orderBy
+								)(
+									config,
+									orderBy,
+									datatableDefinition.columns[config.column]
+								);
+							default:
+								return `tolower(${orderBy}) ${config.dir}`;
+						}
+					})
+					.filter(value => value)
+					.join(',');
 			}
 
 			// $search
@@ -249,36 +316,37 @@ AppEssentials.Backbone.Components.DatatableView = AppEssentials.Backbone.View.ex
 				queryArray.push(`${key}=${queryObject[key]}`);
 			}
 
-			this.collection.fetch({ query: queryArray.join('&') })
-				.then((data) => {
-					this.showAlert('success');
-					callback({
-						data: this.collection.toJSON(),
-						draw,
-						recordsTotal: data['@odata.count'],
-						recordsFiltered: data['@odata.count']
-					});
-				}, () => { //(error) => {
-					// console.log('ERROR', error);
-					// IF error.resolveWithLogin
-					// IF 401 - no access
-					// ELSE
-
-					// if () {
-
-					// } else if() {
-					// 	// SHOW ACCESS ERROR
-					// } else {
-					// 	// SHOW ERROR
-					// }
-
-
-					callback({ data: [], draw, recordsTotal: 0, recordsFiltered: 0 });
-				});
+			this.ajaxFetch(queryArray.join('&'), draw, callback);
 		}
 	},
 
-	initComplete() { },
+	ajaxFetch(query, draw, callback) {
+		return this.collection.fetch({ query }).then(
+			({data}) => {
+				callback({
+					data: this.collection.toJSON(),
+					draw,
+					recordsTotal: data['@odata.count'],
+					recordsFiltered: data['@odata.count']
+				});
+			},
+			({error}) => {
+				// TODO
+				// IF error.resolveWithLogin
+				// IF 401 - no access
+				// ELSE
+
+				this.showAlert(
+					`<strong>An error has occured.</strong> Error code: ${
+						error.code
+					} Error message: ${error.message}`
+				);
+				callback({ data: [], draw, recordsTotal: 0, recordsFiltered: 0 });
+			}
+		);
+	},
+
+	initComplete() {},
 
 	buildTable() {
 		const newTable = document.createElement('table');
@@ -297,134 +365,178 @@ AppEssentials.Backbone.Components.DatatableView = AppEssentials.Backbone.View.ex
 	showAlert(message, className = 'alert-danger') {
 		let parentNode = this.el;
 
-		const model = new AppEssentials.Backbone.Components.AlertModel({ message });
-		const AlertView = AppEssentials.Backbone.Components.AlertView.extend({ className });
+		const model = new AlertModel({
+			message
+		});
+		const AlertView = AlertView.extend({
+			className
+		});
 		const alertView = new AlertView({ model });
 
 		parentNode.insertBefore(alertView.el, parentNode.firstChild);
 		alertView.render();
-	},
+	}
 });
 
 ////////////////////////////////////////////////////////////////////////////////
 
 /* exported FilteredDatatableView */
-AppEssentials.Backbone.Components.FilteredDatatableView = AppEssentials.Backbone.Components.DatatableView.extend({
+const FilteredDatatableView = DatatableView.extend(
+	{
+		// Property
 
-	// Property
+		attributes: { 'data-view': 'FilteredDatatableView' },
 
-	orderCellsTop: true,
+		orderCellsTop: true,
 
-	// Methods
+		// Methods
 
-	initComplete(settings, json) {
-		AppEssentials.Backbone.Components.DatatableView.prototype.initComplete.call(this, settings, json);
+		initComplete(settings, json) {
+			DatatableView.prototype.initComplete.call(
+				this,
+				settings,
+				json
+			);
 
-		for (let index = 0, length = this.datatable.columns()[0].length; index < length; index++) {
-			const field = this.el.querySelector(`[data-column-index="${index}"]`);
-			if (field) {
-				this.el.querySelector(`[data-column-index="${index}"]`).value = this.datatable.column(index).search() || '';
+			for (
+				let index = 0, length = this.datatable.columns()[0].length;
+				index < length;
+				index++
+			) {
+				const field = this.el.querySelector(
+					`[data-column-index="${index}"]`
+				);
+				if (field) {
+					this.el.querySelector(`[data-column-index="${index}"]`).value =
+						this.datatable.column(index).search() || '';
+				}
 			}
-		}
-	},
+		},
 
-	buildTable() {
-		return AppEssentials.Backbone.Components.DatatableView.prototype.buildTable.call(this)
-			.then(newTable => {
-				const thead = newTable.appendChild(document.createElement('thead'));
+		buildTable() {
+			return DatatableView.prototype.buildTable
+				.call(this)
+				.then(newTable => {
+					const thead = newTable.appendChild(
+						document.createElement('thead')
+					);
 
-				const tr1 = thead.appendChild(document.createElement('tr'));
-				this.datatableDefinition.columns.forEach(() => {
-					tr1.appendChild(document.createElement('th'));
-				});
+					const tr1 = thead.appendChild(document.createElement('tr'));
+					this.datatableDefinition.columns.forEach(() => {
+						tr1.appendChild(document.createElement('th'));
+					});
 
-				const tr2 = thead.appendChild(document.createElement('tr'));
+					const tr2 = thead.appendChild(document.createElement('tr'));
 
-				const promises = [];
-				this.datatableDefinition.columns.forEach((column, index) => {
-					const th = tr2.appendChild(document.createElement('th'));
+					const promises = [];
+					this.datatableDefinition.columns.forEach((column, index) => {
+						const th = tr2.appendChild(document.createElement('th'));
 
-					if (column.searchable === false) {
-						return;
-					}
-
-					const title = column.title || column.data;
-
-					if (column.choices) {
-						const select = th.appendChild(document.createElement('select'));
-						select.classList.add('form-control');
-						select.setAttribute('aria-label', title);
-						select.setAttribute('data-column-index', index);
-
-						select.addEventListener('change', () => {
-							this.datatable.columns(index).search(select.value).draw();
-						});
-
-						const option0 = select.appendChild(document.createElement('option'));
-						option0.setAttribute('value', '');
-
-						let choices = column.choices;
-						const promise = Promise.resolve()
-							.then(() => {
-								if (Array.isArray(choices)) {
-									choices = choices.slice(0);
-								} else if (typeof choices === 'string') {
-									option0.innerHTML = `Loading&hellip;`;
-									return AppEssentials.Utilities.doAjax({
-										url: choices
-									}).then((data) => {
-										choices = data;
-									});
-								}
-							})
-							.then(() => {
-								if (column.choicesMap) {
-									column.choicesMap = AppEssentials.Utilities.stringToFunction(column.choicesMap);
-									choices = column.choicesMap(choices);
-								}
-
-								if (choices[0].value !== '') {
-									choices.unshift({ text: `Any ${column.title || column.data}`, value: '' });
-								}
-
-								select.removeChild(option0);
-								choices.forEach((choice) => {
-									const option = select.appendChild(document.createElement('option'));
-									option.textContent = choice.text || choice.value;
-									option.setAttribute('value', choice.value != null ? choice.value : choice.text);
-								});
-							});
-						promises.push(promise);
-					} else {
-						const input = th.appendChild(document.createElement('input'));
-						input.classList.add('form-control');
-						input.setAttribute('aria-label', `Filter by ${title}`);
-						input.setAttribute('data-column-index', index);
-
-						const eventHandler = () => {
-							this.datatable.columns(index).search(input.value).draw();
+						if (column.searchable === false) {
+							return;
 						}
 
-						input.addEventListener('change', eventHandler);
-						input.addEventListener('keyup', eventHandler);
-					}
-				});
+						const title = column.title || column.data;
 
-				return Promise.all(promises)
-					.then(() => {
+						if (column.choices) {
+							const select = th.appendChild(
+								document.createElement('select')
+							);
+							select.classList.add('form-control');
+							select.setAttribute('aria-label', title);
+							select.setAttribute('data-column-index', index);
+
+							select.addEventListener('change', () => {
+								this.datatable
+									.columns(index)
+									.search(select.value)
+									.draw();
+							});
+
+							const option0 = select.appendChild(
+								document.createElement('option')
+							);
+							option0.setAttribute('value', '');
+
+							let choices = column.choices;
+							const promise = Promise.resolve()
+								.then(() => {
+									if (Array.isArray(choices)) {
+										choices = choices.slice(0);
+									} else if (typeof choices === 'string') {
+										option0.innerHTML = `Loading&hellip;`;
+										return doAjax({
+											url: choices
+										}).then(({data}) => {
+											choices = data;
+										});
+									}
+								})
+								.then(() => {
+									if (column.choicesMap) {
+										column.choicesMap = stringToFunction(
+											column.choicesMap
+										);
+										choices = column.choicesMap(choices);
+									}
+
+									if (choices[0].value !== '') {
+										choices.unshift({
+											text: `Any ${column.title || column.data}`,
+											value: ''
+										});
+									}
+
+									select.removeChild(option0);
+									choices.forEach(choice => {
+										const option = select.appendChild(
+											document.createElement('option')
+										);
+										option.textContent = choice.text || choice.value;
+										option.setAttribute(
+											'value',
+											choice.value != null
+												? choice.value
+												: choice.text
+										);
+									});
+								});
+							promises.push(promise);
+						} else {
+							const input = th.appendChild(
+								document.createElement('input')
+							);
+							input.classList.add('form-control');
+							input.setAttribute('aria-label', `Filter by ${title}`);
+							input.setAttribute('data-column-index', index);
+
+							const eventHandler = () => {
+								this.datatable
+									.columns(index)
+									.search(input.value)
+									.draw();
+							};
+
+							input.addEventListener('change', eventHandler);
+							input.addEventListener('keyup', eventHandler);
+						}
+					});
+
+					return Promise.all(promises).then(() => {
 						return newTable;
 					});
-			});
-	},
+				});
+		},
 
-	resetFilters() {
-		const filters = this.el.querySelectorAll(`[data-column-index]`);
-		for (let index = 0, length = filters.length; index < length; index++) {
-			const filter = filters[index];
-			const columnIndex = filter.getAttribute('data-column-index');
-			filter.value = '';
-			this.datatable.column(columnIndex).search('');
+		resetFilters() {
+			const filters = this.el.querySelectorAll(`[data-column-index]`);
+			for (let index = 0, length = filters.length; index < length; index++) {
+				const filter = filters[index];
+				const columnIndex = filter.getAttribute('data-column-index');
+				filter.value = '';
+				this.datatable.column(columnIndex).search('');
+			}
+			this.datatable.draw();
 		}
-		this.datatable.draw();
 	}
-});
+);

@@ -1,8 +1,8 @@
-/* global AppEssentials */
+/* global FormView */
 
-AppEssentials.Backbone.Components.LoginFormView = AppEssentials.Backbone.Components.FormView.extend({
-
-	// Overriden Properties
+/* exported LoginFormView */
+const LoginFormView = FormView.extend({
+	attributes: { 'data-view': 'LoginFormView' },
 
 	events: {
 		['click .btn-login']() {
@@ -20,7 +20,8 @@ AppEssentials.Backbone.Components.LoginFormView = AppEssentials.Backbone.Compone
 						fields: [
 							{
 								type: 'html',
-								html: 'Login using your City of Toronto username and password.'
+								html:
+									'Login using your City of Toronto username and password.'
 							}
 						]
 					},
@@ -56,20 +57,14 @@ AppEssentials.Backbone.Components.LoginFormView = AppEssentials.Backbone.Compone
 						fields: [
 							{
 								type: 'html',
-								html: 'Need help logging in? Contact <a href="mailto:itservice@toronto.ca">IT Service Desk</a> or all 416-338-2255'
+								html:
+									'Need help logging in? Contact <a href="mailto:itservice@toronto.ca">IT Service Desk</a> or all 416-338-2255'
 							}
 						]
 					}
 				]
 			}
 		]
-	},
-
-	// Overriden Methods
-
-	initialize(options) {
-		this.model = AppEssentials.Backbone.LoginModel.instance;
-		AppEssentials.Backbone.Components.FormView.prototype.initialize.call(this, options)
 	},
 
 	success() {
@@ -79,12 +74,19 @@ AppEssentials.Backbone.Components.LoginFormView = AppEssentials.Backbone.Compone
 		const buttonText = button.querySelectorAll('span')[1];
 		buttonText.textContent = 'Verifying information';
 
-		this.model.login()
-			.then(() => {
-				AppEssentials.Backbone.Components.FormView.prototype.success.call(this);
-			}, () => {
-				this.showAlert('<strong>Login failed.</strong> Please review your user name and password and try again.', 0);
-			})
+		this.model
+			.login()
+			.then(
+				() => {
+					this.trigger('success');
+				},
+				() => {
+					this.showAlert(
+						'<strong>Login failed.</strong> Please review your user name and password and try again.',
+						0
+					);
+				}
+			)
 			.then(() => {
 				this.formValidator.resetForm();
 

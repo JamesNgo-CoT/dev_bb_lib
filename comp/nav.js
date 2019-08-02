@@ -1,9 +1,7 @@
-/* global AppEssentials */
+/* global _ BaseModel BaseCollection BaseView */
 
-AppEssentials.Backbone.Components.NavItemModel = AppEssentials.Backbone.Model.extend({
-
-	// Overriden Property
-
+/* exported NavItemModel */
+const NavItemModel = BaseModel.extend({
 	defaults: {
 		title: 'Untitled',
 		fragment: '',
@@ -13,27 +11,24 @@ AppEssentials.Backbone.Components.NavItemModel = AppEssentials.Backbone.Model.ex
 	}
 });
 
-AppEssentials.Backbone.Components.NavItemView = AppEssentials.Backbone.View.extend({
-
-	// Overriden Properties
-
-	attributes: { role: 'presentation' },
+/* exported NavItemView */
+const NavItemView = BaseView.extend({
+	attributes: { role: 'presentation', 'data-view': 'NavItemView' },
 
 	tagName: 'li',
-
-
-	// Overriden Methods
 
 	initialize(options) {
 		this.listenTo(options.model, 'change', () => {
 			this.render();
 		});
 
-		AppEssentials.Backbone.View.prototype.initialize.call(this, options);
+		BaseView.prototype.initialize.call(this, options);
 	},
 
 	render() {
-		this.el.innerHTML = `<a href="#${this.model.escape('fragment')}">${this.model.escape('title')}</a>`;
+		this.el.innerHTML = `<a href="#${this.model.escape(
+			'fragment'
+		)}">${this.model.escape('title')}</a>`;
 
 		if (this.model.get('isActive')) {
 			this.el.classList.add('active');
@@ -47,41 +42,38 @@ AppEssentials.Backbone.Components.NavItemView = AppEssentials.Backbone.View.exte
 			this.el.classList.add('hide');
 		}
 
-		return AppEssentials.Backbone.View.prototype.render.call(this);
+		return BaseView.prototype.render.call(this);
 	}
 });
 
-AppEssentials.Backbone.Components.AuthyNavItemView = AppEssentials.Backbone.Components.NavItemView.extend({
+/* exported AuthyNavItemView */
+const AuthyNavItemView = NavItemView.extend({
 	initialize(options) {
-		if (AppEssentials.Backbone.LoginModel.instance) {
-			this.listenTo(AppEssentials.Backbone.LoginModel.instance, 'change', () => {
+		const loginModel = _.result(this, 'loginModel');
+		if (loginModel) {
+			this.listenTo(loginModel, 'change', () => {
 				this.render();
 			});
 		}
 
-
-		return AppEssentials.Backbone.Components.NavItemView.prototype.initialize.call(this, options);
+		return NavItemView.prototype.initialize.call(this, options);
 	},
 
 	render() {
-		return AppEssentials.Backbone.Components.NavItemView.prototype.render.call(this)
-			.then(() => {
-				if (AppEssentials.Backbone.LoginModel.instance && AppEssentials.Backbone.LoginModel.instance.isLoggedIn()) {
-					this.el.classList.remove('hide');
-				} else {
-					this.el.classList.add('hide');
-				}
-			});
+		return NavItemView.prototype.render.call(this).then(() => {
+			const loginModel = _.result(this, 'loginModel');
+			if (loginModel && loginModel.isLoggedIn()) {
+				this.el.classList.remove('hide');
+			} else {
+				this.el.classList.add('hide');
+			}
+		});
 	}
 });
 
-AppEssentials.Backbone.Components.NavCollection = AppEssentials.Backbone.Collection.extend({
-
-	// Override Property
-
-	model: AppEssentials.Backbone.Components.NavItemModel,
-
-	// New Method
+/* exported NavCollection */
+const NavCollection = BaseCollection.extend({
+	model: NavItemModel,
 
 	setActive(index) {
 		this.each((model, modelIndex) => {
@@ -94,8 +86,11 @@ AppEssentials.Backbone.Components.NavCollection = AppEssentials.Backbone.Collect
 	}
 });
 
-AppEssentials.Backbone.Components.NavView = AppEssentials.Backbone.View.extend({
-	attributes: { role: 'navigation' },
+/* exported NavView */
+const NavView = BaseView.extend({
+	attributes: { role: 'navigation', 'data-view': 'NavView' },
+
+	className: 'navview',
 
 	initialize(options) {
 		this.navItems = [];
@@ -104,7 +99,7 @@ AppEssentials.Backbone.Components.NavView = AppEssentials.Backbone.View.extend({
 			this.render();
 		});
 
-		AppEssentials.Backbone.View.prototype.initialize.call(this, options);
+		BaseView.prototype.initialize.call(this, options);
 	},
 
 	removeNavItems() {
@@ -114,7 +109,7 @@ AppEssentials.Backbone.Components.NavView = AppEssentials.Backbone.View.extend({
 
 	remove() {
 		this.removeNavItems();
-		AppEssentials.Backbone.View.prototype.remove.call(this);
+		BaseView.prototype.remove.call(this);
 	},
 
 	render() {
@@ -130,9 +125,14 @@ AppEssentials.Backbone.Components.NavView = AppEssentials.Backbone.View.extend({
 		this.collection.each(model => {
 			let navItemView;
 			if (model.get('requiresLogin')) {
-				navItemView = new AppEssentials.Backbone.Components.AuthyNavItemView({ model, authModel: this.authModel });
+				const AuthyNavItemView = AuthyNavItemView.extend({
+					loginModel: _.result(this, 'loginModel')
+				});
+				navItemView = new AuthyNavItemView({ model });
 			} else {
-				navItemView = new AppEssentials.Backbone.Components.NavItemView({ model });
+				navItemView = new NavItemView({
+					model
+				});
 			}
 
 			if (navItemView) {
@@ -142,9 +142,8 @@ AppEssentials.Backbone.Components.NavView = AppEssentials.Backbone.View.extend({
 			}
 		});
 
-		return Promise.all(navItemViewRenderPromises)
-			.then(() => {
-				return AppEssentials.Backbone.View.prototype.render.call(this);
-			});
+		return Promise.all(navItemViewRenderPromises).then(() => {
+			return BaseView.prototype.render.call(this);
+		});
 	}
 });

@@ -1,0 +1,33 @@
+%LoginFormDialogView {
+	[data-view="LoginFormView"] {
+		.panel {
+			margin-bottom: 0;
+			border: 0;
+			box-shadow: none;
+
+			.panel-heading {
+				display: none;
+			}
+
+			.panel-body {
+				padding: 0;
+
+				.row:nth-child(4) {
+					display: none;
+				}
+
+				.row:last-child {
+					.form-group {
+						margin-bottom: 0;
+					}
+				}
+			}
+		}
+	}
+}
+
+%LoginFormDialogViewRoot {
+	[data-view="LoginFormDialogView"] {
+		@extend %LoginFormDialogView;
+	}
+}

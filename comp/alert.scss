@@ -1,3 +1,5 @@
-%AlertView {
-  color: inherit;
+%AlertViewRoot {
+	[data-view="AlertView"] {
+		color: inherit;
+	}
 }

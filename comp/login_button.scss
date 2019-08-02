@@ -1,0 +1,10 @@
+%LoginButtonView {
+	display: inline-block;
+	white-space: nowrap;
+}
+
+%LoginButtonViewRoot {
+	[data-view="LoginButtonView"] {
+		@extend %LoginButtonView;
+	}
+}

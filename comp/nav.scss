@@ -1,59 +1,65 @@
 %NavView {
-  border-bottom: 3px solid #165788;
-  margin-bottom: 1rem;
+	border-bottom: 3px solid #165788;
+	margin-bottom: 1rem;
 
-  .nav.nav-tabs {
-    overflow: visible;
+	.nav.nav-tabs {
+		overflow: visible;
 
-    &:after {
-      clear: both;
-      content: "";
-      display: table;
-    }
+		&:after {
+			clear: both;
+			content: "";
+			display: table;
+		}
 
-    li {
-      a {
-        color: #000;
-        background-color: #f2f2f2;
-        border: 1px solid #d9d9d9;
-        font-size: 18px;
-        font-weight: 500;
-        margin-right: 5px;
-        margin-top: 5px;
+		li {
+			a {
+				color: #000;
+				background-color: #f2f2f2;
+				border: 1px solid #d9d9d9;
+				font-size: 18px;
+				font-weight: 500;
+				margin-right: 5px;
+				margin-top: 5px;
 
-        &:focus {
-          border-top: 4px solid #ec9f09;
-          padding-top: 7px;
-          text-decoration: underline;
-          outline: -webkit-focus-ring-color auto 5px !important;
-          outline-color: -webkit-focus-ring-color !important;
-          outline-style: auto !important;
-          outline-width: 5px !important;
-          outline-offset: 0;
-        }
+				&:focus {
+					border-top: 4px solid #ec9f09;
+					padding-top: 7px;
+					text-decoration: underline;
+					outline: -webkit-focus-ring-color auto 5px !important;
+					outline-color: -webkit-focus-ring-color !important;
+					outline-style: auto !important;
+					outline-width: 5px !important;
+					outline-offset: 0;
+				}
 
-        &:hover {
-          text-decoration: underline;
-        }
-      }
+				&:hover {
+					text-decoration: underline;
+				}
+			}
 
-      &.active {
-        a {
-          color: #fff;
-          background-color: #165788;
-          border-color: #165788;
+			&.active {
+				a {
+					color: #fff;
+					background-color: #165788;
+					border-color: #165788;
 
-          &:focus {
-            border-top: 4px solid #ec9f09;
-            padding-top: 7px;
-            text-decoration: none;
-          }
+					&:focus {
+						border-top: 4px solid #ec9f09;
+						padding-top: 7px;
+						text-decoration: none;
+					}
 
-          &:hover {
-            text-decoration: none;
-          }
-        }
-      }
-    }
-  }
+					&:hover {
+						text-decoration: none;
+					}
+				}
+			}
+		}
+	}
+}
+
+%NavViewRoot {
+	[data-view="NavView"] {
+		@extend %NavView;
+	}
 }

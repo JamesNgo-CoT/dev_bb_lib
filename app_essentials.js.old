@@ -1,4 +1,4 @@
-/* global _ $ Backbone */
+/* global _ AppEssentials Backbone jQuery */
 
 ////////////////////////////////////////////////////////////////////////////////
 // UTILITIES
@@ -7,17 +7,46 @@
 /* exported doAjax */
 function doAjax(options) {
 	return new Promise((resolve, reject) => {
-		$.ajax(options).then(
-			(data, textStatus, jqXHR) => resolve({ data, textStatus, jqXHR }),
-			(jqXHR, textStatus, errorThrown) =>
-				reject({ jqXHR, textStatus, errorThrown })
+		jQuery.ajax(options).then(
+			data => {
+				resolve(data);
+			},
+			jqXHR => {
+				const error = {
+					code: jqXHR.status,
+					message: '',
+					resolveWithLogin: false
+				};
+				if (jqXHR.responseJSON && jqXHR.responseJSON.message) {
+					error.message = jqXHR.responseJSON.message;
+				} else {
+					error.message = jqXHR.responseText;
+				}
+
+				// Missing authentication and invalid SID returns a 400 HTTP error code.
+				if (error.code === 400) {
+					const AUTH_IS_MISSING_ERROR =
+						"Header 'Authorization' is missing or in incorrect format, or authentication mechanism other than AuthSession / Basic is specified, or session service is unreachable.";
+					const INVALID_SID_ERROR_PREFIX = 'Session id / Token';
+					const INVALID_SID_ERROR_SUFFIX = 'is invalid.';
+					if (
+						error.message.indexOf(AUTH_IS_MISSING_ERROR) !== -1 ||
+						(error.message.indexOf(INVALID_SID_ERROR_PREFIX) !== -1 &&
+							error.message.indexOf(INVALID_SID_ERROR_SUFFIX) !== -1)
+					) {
+						error.resolveWithLogin = true;
+					}
+				}
+
+				reject(error);
+			}
 		);
 	});
 }
 
-/* exported escapeOdataValue */
-function escapeOdataValue(value) {
-	return value
+/* exported escapeODataValue */
+function escapeODataValue(str) {
+	return str
 		.replace(/'/g, "''")
 		.replace(/%/g, '%25')
 		.replace(/\+/g, '%2B')
@@ -33,7 +62,10 @@ function escapeOdataValue(value) {
 /* exported loadScripts */
 function loadScripts(...urls) {
 	const promises = [];
-	urls.forEach(url => {
+
+	for (let index = 0, length = urls.length; index < length; index++) {
+		const url = urls[index];
+
 		if (document.querySelectorAll(`script[src="${url}"]`).length > 0) {
 			return;
 		}
@@ -53,13 +85,22 @@ function loadScripts(...urls) {
 				document.getElementsByTagName('head')[0].appendChild(script);
 			})
 		);
-	});
+	}
 
 	return Promise.all(promises);
 }
 
-/* exported stringToFunction */
-function stringToFunction(str) {
+////////////////////////////////////////////////////////////////////////////////
+// JQUERY CONFIGURATION
+////////////////////////////////////////////////////////////////////////////////
+
+jQuery.ajaxSetup({
+	dataFilter(data) {
+		return data;
+	}
+});
+
+AppEssentials.Utilities.stringToFunction = str => {
 	if (typeof str !== 'string') {
 		return str;
 	}
@@ -71,35 +112,60 @@ function stringToFunction(str) {
 	}
 
 	return null;
-}
+};
 
-/* exported restartRouter */
-function restartRouter() {
-	if (Backbone.History.started) {
-		Backbone.history.stop();
+AppEssentials.Utilities.swapView = (element, oldView, newView) => {
+	element.style.height = getComputedStyle(element).height;
+	element.style.overflow = 'hidden';
+
+	if (oldView) {
+		oldView.remove();
 	}
-	Backbone.history.start();
-}
 
-/* exported toQueryString */
-function toQueryString(queryObject) {
+	return Promise.resolve()
+		.then(() => {
+			if (newView) {
+				return newView.appendTo(element).render();
+			}
+		})
+		.then(() => {
+			element.style.removeProperty('overflow');
+			element.style.removeProperty('height');
+		})
+		.then(() => {
+			return newView;
+		});
+};
+
+AppEssentials.Utilities.toQueryString = queryObject => {
 	if (Array.isArray(queryObject)) {
-		return queryObject
-			.map(val => {
-				return toQueryString(val);
-			})
-			.join(',');
+		const array = [];
+		for (
+			let index = 0, length = queryObject.length;
+			index < length;
+			index++
+		) {
+			array.push(
+				encodeURIComponent(
+					AppEssentials.Utilities.toQueryString(queryObject[index])
+				)
+			);
+		}
+		return array.join(',');
 	}
 
 	if (typeof queryObject === 'object' && queryObject !== null) {
-		return Object.keys(queryObject)
-			.filter(key => {
-				return Object.prototype.hasOwnProperty.call(queryObject, key);
-			})
-			.map(key => {
-				return `${key}=${toQueryString(queryObject[key])}`;
-			})
-			.join('&');
+		const array = [];
+		for (const key in queryObject) {
+			if (Object.prototype.hasOwnProperty.call(queryObject, key)) {
+				array.push(
+					`${key}=${encodeURIComponent(
+						AppEssentials.Utilities.toQueryString(queryObject[key])
+					)}`
+				);
+			}
+		}
+		return array.join('&');
 	}
 
 	let prefix = '';
@@ -122,65 +188,56 @@ function toQueryString(queryObject) {
 		default:
 			prefix = 's';
 	}
+	return `${prefix}${String(queryObject)}`;
+};
 
-	return encodeURIComponent(`${prefix}${String(queryObject)}`);
-}
-
-/* exported toQueryObject */
-function toQueryObject(queryString) {
+AppEssentials.Utilities.toQueryObject = queryString => {
 	if (typeof queryString !== 'string') {
 		return queryString;
 	}
 
 	if (queryString.indexOf(',') !== -1) {
-		return queryString.split(',').map(val => {
-			return toQueryObject(val);
-		});
+		const array = queryString.split(',');
+		for (let index = 0, length = array.length; index < length; index++) {
+			array[index] = AppEssentials.Utilities.toQueryObject(
+				decodeURIComponent(array[index])
+			);
+		}
+		return array;
 	}
 
 	if (queryString.indexOf('=') !== -1) {
-		return queryString.split('&').reduce((acc, curr) => {
-			const [name, value] = curr.split('=');
-			acc[name] = toQueryObject(value);
-			return acc;
-		}, {});
+		const object = {};
+		const array = queryString.split('&');
+		for (let index = 0, length = array.length; index < length; index++) {
+			const pair = array[index].split('=');
+			object[pair[0]] = AppEssentials.Utilities.toQueryObject(
+				decodeURIComponent(pair[1])
+			);
+		}
+		return object;
 	}
 
 	const prefix = queryString.charAt(0);
-	let value = decodeURIComponent(queryString.slice(1));
+	const value = queryString.slice(1);
 	switch (prefix) {
 		case 'u':
-			value = undefined;
-			break;
+			return undefined;
 		case 'b':
-			value = Boolean(value);
-			break;
+			return Boolean(value);
 		case 'n':
-			value = Number(value);
-			break;
+			return Number(value);
 		case 'f':
-			value = new Function(`return ${value}`)();
-			break;
+			return new Function(`return ${value}`)();
 		case 'o':
-			value = null;
-			break;
+			return null;
+		default:
+			return value;
 	}
-
-	return value;
-}
+};
 
 ////////////////////////////////////////////////////////////////////////////////
-// JQUERY SETUP
-////////////////////////////////////////////////////////////////////////////////
-
-$.ajaxSetup({
-	dataFilter(data) {
-		return data;
-	}
-});
-
-////////////////////////////////////////////////////////////////////////////////
-// COREJS SETUP
+// CoreJS Overrides
 ////////////////////////////////////////////////////////////////////////////////
 
 if (window.cot_app) {
@@ -190,7 +247,6 @@ if (window.cot_app) {
 			.querySelector('#app-header h1')
 			.appendChild(document.createElement('span'));
 		this.titleElement.setAttribute('tabindex', '-1');
-
 		return originalRender.call(this);
 	};
 
@@ -322,7 +378,7 @@ if (window.CotForm) {
 		}
 
 		function finalizeRenderer(renderer) {
-			return stringToFunction(renderer);
+			return AppEssentials.Utilities.stringToFunction(renderer);
 		}
 
 		const cotForm = this;
@@ -387,7 +443,7 @@ if (window.CotForm) {
 									}
 
 									if (typeof field.choices === 'string') {
-										return doAjax({
+										return AppEssentials.Utilities.doAjax({
 											url: field.choices
 										}).then(data => {
 											field.choices = data;
@@ -397,7 +453,7 @@ if (window.CotForm) {
 							})
 							.then(() => {
 								if (field.choicesMap) {
-									field.choicesMap = stringToFunction(
+									field.choicesMap = AppEssentials.Utilities.stringToFunction(
 										field.choicesMap
 									);
 									field.choices = field.choicesMap(field.choices);
@@ -570,70 +626,76 @@ if (window.CotForm) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// BACKBONE SETUP
+// Backbone Setup
 ////////////////////////////////////////////////////////////////////////////////
+
+Backbone.ajax = AppEssentials.Utilities.doAjax;
 
 const originalBackboneSync = Backbone.sync;
 Backbone.sync = function(method, model, options = {}) {
-	return new Promise((resolve, reject) => {
-		options.headers = options.headers || {};
-		options.headers.Accept =
-			options.headers.Accept || 'application/json; charset=utf-8';
+	options.headers = options.headers || {};
+	options.headers.Accept =
+		options.headers.Accept || 'application/json; charset=utf-8';
 
-		if (!options.headers.Authorization) {
-			const loginModel =
-				_.result(model, 'loginModel') || LoginModel.instance;
-			if (loginModel && loginModel !== model && !loginModel.isNew()) {
-				options.headers.Authorization = `AuthSession ${loginModel.get(
-					loginModel.idAttribute
-				)}`;
-			}
+	if (!options.headers.Authorization) {
+		const loginModel =
+			_.result(model, 'loginModel') ||
+			AppEssentials.Backbone.LoginModel.instance;
+		if (loginModel && loginModel !== model && !loginModel.isNew()) {
+			options.headers.Authorization = `AuthSession ${loginModel.get(
+				loginModel.idAttribute
+			)}`;
 		}
+	}
 
-		if (method === 'create' || method === 'update' || method === 'patch') {
-			options.contentType =
-				options.contentType || 'application/json; charset=utf-8';
+	if (method === 'create' || method === 'update' || method === 'patch') {
+		options.contentType =
+			options.contentType || 'application/json; charset=utf-8';
 
-			if (!options.data) {
-				let json = options.attrs || model.toJSON(options);
+		if (!options.data) {
+			let json = options.attrs || model.toJSON(options);
 
-				delete json['@odata.context'];
-				delete json['@odata.etag'];
-				delete json['__CreatedOn'];
-				delete json['__ModifiedOn'];
-				delete json['__Owner'];
+			delete json['@odata.context'];
+			delete json['@odata.etag'];
+			delete json['__CreatedOn'];
+			delete json['__ModifiedOn'];
+			delete json['__Owner'];
 
-				const adjustSyncJson =
-					options.adjustSyncJson || model.adjustSyncJson;
-				if (adjustSyncJson) {
-					json = adjustSyncJson(json);
-				}
-
-				options.data = JSON.stringify(json);
+			const adjustSyncJson = options.adjustSyncJson || model.adjustSyncJson;
+			if (adjustSyncJson) {
+				json = adjustSyncJson(json);
 			}
+
+			options.data = JSON.stringify(json);
 		}
+	}
 
-		originalBackboneSync.call(this, method, model, options).then(
-			(data, textStatus, jqXHR) => {
-				resolve({ data, textStatus, jqXHR });
-			},
-			(jqXHR, textStatus, errorThrown) => {
-				reject({ jqXHR, textStatus, errorThrown });
-			}
-		);
-	});
+	return originalBackboneSync.call(this, method, model, options);
 };
 
 ////////////////////////////////////////////////////////////////////////////////
-// BACKBONE CLASSES
+// Backbone Namespace
 ////////////////////////////////////////////////////////////////////////////////
 
-/* exported BaseRouter */
-const BaseRouter = Backbone.Router.extend({
+AppEssentials.Backbone = AppEssentials.Backbone || {};
+AppEssentials.BB = AppEssentials.Backbone;
+
+AppEssentials.Backbone.restartRouter = () => {
+	if (Backbone.History.started) {
+		Backbone.history.stop();
+	}
+	Backbone.history.start();
+};
+
+AppEssentials.Backbone.Router = Backbone.Router.extend({
+	// Overridden Property
+
 	routes: {
 		['home']() {},
 		'*default': 'routeDefault'
 	},
+
+	// New Properties
 
 	defaultFragment: 'home',
 
@@ -645,6 +707,38 @@ const BaseRouter = Backbone.Router.extend({
 			if (typeof defaultFragment === 'string') {
 				this.navigate(defaultFragment, { trigger: true });
 			}
+		}
+	},
+
+	// Overridden Methods
+
+	execute(callback, args, name) {
+		let cleanupFunctionReturnValue;
+
+		if (typeof this.cleanupFunction === 'function') {
+			cleanupFunctionReturnValue = this.cleanupFunction.call(this, name);
+			if (cleanupFunctionReturnValue !== false) {
+				this.cleanupFunction = null;
+			}
+		}
+
+		if (
+			cleanupFunctionReturnValue !== false &&
+			typeof callback === 'function'
+		) {
+			Promise.resolve()
+				.then(() => {
+					return callback.call(this, ...args);
+				})
+				.then(cleanupFunction => {
+					if (typeof cleanupFunction === 'function') {
+						this.cleanupFunction = cleanupFunction;
+					}
+				});
+		}
+
+		if (cleanupFunctionReturnValue === false) {
+			this.routeDefault();
 		}
 	},
 
@@ -680,41 +774,12 @@ const BaseRouter = Backbone.Router.extend({
 		}
 
 		return Backbone.Router.prototype.route.call(this, route, name, callback);
-	},
-
-	execute(callback, args, name) {
-		let cleanupFunctionReturnValue;
-
-		if (typeof this.cleanupFunction === 'function') {
-			cleanupFunctionReturnValue = this.cleanupFunction.call(this, name);
-			if (cleanupFunctionReturnValue !== false) {
-				this.cleanupFunction = null;
-			}
-		}
-
-		if (
-			cleanupFunctionReturnValue !== false &&
-			typeof callback === 'function'
-		) {
-			Promise.resolve()
-				.then(() => {
-					return callback.call(this, ...args);
-				})
-				.then(cleanupFunction => {
-					if (typeof cleanupFunction === 'function') {
-						this.cleanupFunction = cleanupFunction;
-					}
-				});
-		}
-
-		if (cleanupFunctionReturnValue === false) {
-			this.routeDefault();
-		}
 	}
 });
 
-/* exported BaseModel */
-const BaseModel = Backbone.Model.extend({
+AppEssentials.Backbone.Model = Backbone.Model.extend({
+	// Overriden Property
+
 	url() {
 		if (this.isNew()) {
 			const url = Backbone.Model.prototype.url;
@@ -727,6 +792,16 @@ const BaseModel = Backbone.Model.extend({
 		return `${base.replace(/\/$/, '')}('${encodeURIComponent(id)}')`;
 	},
 
+	// New Properties
+
+	loginModel: null,
+
+	webStorage: localStorage,
+
+	webStorageKey: null,
+
+	// Overriden Method
+
 	sync(method, model, options) {
 		return Backbone.Model.prototype.sync
 			.call(this, method, model, options)
@@ -736,13 +811,11 @@ const BaseModel = Backbone.Model.extend({
 			});
 	},
 
+	// New Methods
+
 	hasChanged() {
 		return this.lastSyncData != JSON.stringify(this.toJSON());
 	},
-
-	// Web Storage
-
-	webStorage: localStorage,
 
 	webStorageFetch(options) {
 		const webStorage =
@@ -781,9 +854,20 @@ const BaseModel = Backbone.Model.extend({
 	}
 });
 
-/* exported BaseCollection */
-const BaseCollection = Backbone.Collection.extend({
-	model: BaseModel,
+AppEssentials.Backbone.Collection = Backbone.Collection.extend({
+	// Overriden Property
+
+	model: AppEssentials.Backbone.Model,
+
+	// New Properties
+
+	loginModel: null,
+
+	webStorage: localStorage,
+
+	webStorageKey: null,
+
+	// Overriden Methods
 
 	fetch(options) {
 		if (options && options.query) {
@@ -810,13 +894,11 @@ const BaseCollection = Backbone.Collection.extend({
 			});
 	},
 
+	// New Methods
+
 	hasChanged() {
 		return this.lastSyncData != JSON.stringify(this.toJSON());
 	},
-
-	// Web Storage
-
-	webStorage: localStorage,
 
 	webStorageFetch(options) {
 		const webStorage =
@@ -855,8 +937,13 @@ const BaseCollection = Backbone.Collection.extend({
 	}
 });
 
-/* exported BaseView */
-const BaseView = Backbone.View.extend({
+AppEssentials.Backbone.View = Backbone.View.extend({
+	// New Property
+
+	loginModel: null,
+
+	// Overriden Methods
+
 	render() {
 		let linkButton = this.el.querySelector('a.btn:not([role="button"])');
 		while (linkButton) {
@@ -873,124 +960,150 @@ const BaseView = Backbone.View.extend({
 		return Promise.resolve();
 	},
 
+	// New Method
+
 	appendTo(el) {
 		el.appendChild(this.el);
 		return this;
 	},
 
 	swapWith(nextView) {
-		const element = this.el.parentNode;
-
-		element.style.height = getComputedStyle(this.el).height;
-		element.style.overflow = 'hidden';
-
-		this.remove();
-
-		return Promise.resolve()
-			.then(() => {
-				return nextView.appendTo(element).render();
-			})
-			.then(() => {
-				element.style.removeProperty('overflow');
-				element.style.removeProperty('height');
-			})
-			.then(() => {
-				return nextView;
-			});
+		return AppEssentials.Utilities.swapView(
+			this.el.parentNode,
+			this,
+			nextView
+		);
 	}
 });
 
-/* exported LoginModel */
-const LoginModel = BaseModel.extend({
-	app: 'cotapp',
+AppEssentials.Backbone.LoginModel = AppEssentials.Backbone.Model.extend(
+	{
+		// Overriden Properties
 
-	idAttribute: 'sid',
+		idAttribute: 'sid',
 
-	webStorageKey: 'Auth',
+		webStorageKey: 'Auth',
 
-	initialize(attributes, options) {
-		this.on(`change:${this.idAttribute}`, () => {
-			if (!this.isNew()) {
-				this.webStorageSave();
-			} else {
-				this.webStorageDestroy();
-			}
-		});
+		// New Property
 
-		this.webStorageFetch();
+		app: 'cotapp',
 
-		if (!this.isNew()) {
-			this.fetch().catch(() => {
-				this.clear();
+		// Overriden Methods
+
+		destroy(options = {}) {
+			options.headers = options.headers || {};
+			options.headers.Authorization = this.get('userID');
+			return AppEssentials.Backbone.Model.prototype.destroy
+				.call(this, options)
+				.finally(() => this.clear());
+		},
+
+		fetch(options) {
+			this.lastFetched = new Date();
+			return AppEssentials.Backbone.Model.prototype.fetch.call(
+				this,
+				options
+			);
+		},
+
+		initialize(attributes, options) {
+			this.on(`change:${this.idAttribute}`, () => {
+				if (!this.isNew()) {
+					this.webStorageSave();
+				} else {
+					this.webStorageDestroy();
+				}
 			});
-		}
 
-		BaseModel.prototype.initialize.call(this, attributes, options);
-	},
+			this.webStorageFetch();
 
-	fetch(options) {
-		this.lastFetched = new Date();
-		return BaseModel.prototype.fetch.call(this, options);
-	},
+			if (!this.isNew()) {
+				this.fetch().catch(() => {
+					this.clear();
+				});
+			}
 
-	save(attributes = {}, options = {}) {
-		const {
-			app = _.result(this, 'app'),
-			user = this.get('user'),
-			pwd = this.get('pwd')
-		} = attributes;
+			AppEssentials.Backbone.Model.prototype.initialize.call(
+				this,
+				attributes,
+				options
+			);
+		},
 
-		return BaseModel.prototype.save.call(this, { app, user, pwd }, options);
-	},
+		parse(response, options) {
+			delete response.pwd;
+			return AppEssentials.Backbone.Model.prototype.parse.call(
+				this,
+				response,
+				options
+			);
+		},
 
-	parse(response, options) {
-		delete response.pwd;
-		return BaseModel.prototype.parse.call(this, response, options);
-	},
+		save(attributes = {}, options = {}) {
+			const {
+				app = _.result(this, 'app'),
+				user = this.get('user'),
+				pwd = this.get('pwd')
+			} = attributes;
 
-	destroy(options = {}) {
-		options.headers = options.headers || {};
-		options.headers.Authorization = this.get('userID');
-		return BaseModel.prototype.destroy
-			.call(this, options)
-			.then(() => this.clear(), () => this.clear());
-	},
+			return AppEssentials.Backbone.Model.prototype.save.call(
+				this,
+				{ app, user, pwd },
+				options
+			);
+		},
 
-	isLoggedIn() {
-		return !this.isNew();
-	},
+		// New Methods
 
-	login(options) {
-		return this.save(options);
-	},
-
-	logout() {
-		return this.destroy();
-	},
-
-	authentication(options = {}) {
-		return Promise.resolve().then(() => {
-			if (!this.isLoggedIn()) {
-				return false;
-			} else {
-				if (
-					options.ignoreLastFetched !== true &&
-					this.lastFetched &&
-					Math.abs(
-						(new Date().getTime() - this.lastFetched.getTime()) /
+		authentication(options = {}) {
+			return Promise.resolve().then(() => {
+				if (!this.isLoggedIn()) {
+					return false;
+				} else {
+					if (
+						options.ignoreLastFetched !== true &&
+						this.lastFetched &&
+						Math.abs(new Date().getTime() - this.lastFetched.getTime()) /
 							1000 /
 							60 /
-							60
-					) < 20
-				) {
-					return this.isLoggedIn();
-				}
+							60 <
+							20
+					) {
+						return this.isLoggedIn();
+					}
 
-				return this.fetch(options).then(
-					() => this.isLoggedIn(),
-					() => this.isLoggedIn()
-				);
-			}
-		});
+					return this.fetch(options).then(
+						() => {
+							return this.isLoggedIn();
+						},
+						() => {
+							return this.isLoggedIn();
+						}
+					);
+				}
+			});
+		},
+
+		isLoggedIn() {
+			return !this.isNew();
+		},
+
+		login(options) {
+			return this.save(options);
+		},
+
+		logout() {
+			return this.destroy();
+		}
+	},
+	{
+		instance: null
 	}
-});
+);
+
+////////////////////////////////////////////////////////////////////////////////
+// Backbone Components Namespace
+////////////////////////////////////////////////////////////////////////////////
+
+AppEssentials.Backbone.Components = AppEssentials.Backbone.Components || {};
+AppEssentials.Backbone.Comp = AppEssentials.Backbone.Components;

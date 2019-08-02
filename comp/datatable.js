@@ -1,4 +1,4 @@
-/* global _ $ doAjax escapeODataValue loadScripts stringToFunction BaseView AlertModel */
+/* global _ $ doAjax escapeODataValue loadScripts stringToFunction BaseView AlertModel AlertView */
 
 /* exported DatatableView */
 const DatatableView = BaseView.extend({
@@ -107,9 +107,7 @@ const DatatableView = BaseView.extend({
 			})
 			.then(() => {
 				if (datatableDefinition.scripts) {
-					return loadScripts(
-						...datatableDefinition.scripts
-					);
+					return loadScripts(...datatableDefinition.scripts);
 				}
 			})
 			.then(() => {
@@ -130,12 +128,8 @@ const DatatableView = BaseView.extend({
 
 				// Convert string to functions.
 				datatableDefinition.columns.forEach(column => {
-					column.render = stringToFunction(
-						column.render
-					);
-					column.createdCell = stringToFunction(
-						column.createdCell
-					);
+					column.render = stringToFunction(column.render);
+					column.createdCell = stringToFunction(column.createdCell);
 				});
 
 				// NOTE: Weird behaviour - Assigning functions into existing object changes the function's context to previous instance...
@@ -162,9 +156,7 @@ const DatatableView = BaseView.extend({
 					this.el.appendChild(table);
 
 					// Create Datatable.
-					this.datatable = $(table).DataTable(
-						tempDatatableDefinition
-					);
+					this.datatable = $(table).DataTable(tempDatatableDefinition);
 
 					// Run super.render(), returns a Promise.
 					return BaseView.prototype.render.call(this);
@@ -236,9 +228,7 @@ const DatatableView = BaseView.extend({
 							case 'boolean':
 							case 'number':
 							case 'date':
-								return `${
-									column.data
-								} eq ${escapeODataValue(
+								return `${column.data} eq ${escapeODataValue(
 									column.search.value
 								)}`;
 
@@ -258,9 +248,7 @@ const DatatableView = BaseView.extend({
 										value =>
 											`contains(tolower(${
 												column.data
-											}),'${escapeODataValue(
-												value.toLowerCase()
-											)}')`
+											}),'${escapeODataValue(value.toLowerCase())}')`
 									)
 									.join(' and ')})`;
 						}
@@ -321,7 +309,7 @@ const DatatableView = BaseView.extend({
 
 	ajaxFetch(query, draw, callback) {
 		return this.collection.fetch({ query }).then(
-			({data}) => {
+			({ data }) => {
 				callback({
 					data: this.collection.toJSON(),
 					draw,
@@ -329,16 +317,23 @@ const DatatableView = BaseView.extend({
 					recordsFiltered: data['@odata.count']
 				});
 			},
-			({error}) => {
-				// TODO
-				// IF error.resolveWithLogin
-				// IF 401 - no access
-				// ELSE
+			({ jqXHR }) => {
+				const errorCode = jqXHR.status;
+
+				let errorMessage;
+				if (errorCode === 404) {
+					errorMessage = 'Data not found.';
+				} else {
+					errorMessage =
+						jqXHR.responseJSON &&
+						jqXHR.responseJSON.error &&
+						jqXHR.responseJSON.error.message
+							? jqXHR.responseJSON.error.message
+							: jqXHR.responseText;
+				}
 
 				this.showAlert(
-					`<strong>An error has occured.</strong> Error code: ${
-						error.code
-					} Error message: ${error.message}`
+					`<strong>An error has occured.</strong> Error code: ${errorCode}. Error message: ${errorMessage}`
 				);
 				callback({ data: [], draw, recordsTotal: 0, recordsFiltered: 0 });
 			}
@@ -367,10 +362,7 @@ const DatatableView = BaseView.extend({
 		const model = new AlertModel({
 			message
 		});
-		const AlertView = AlertView.extend({
-			className
-		});
-		const alertView = new AlertView({ model });
+		const alertView = new AlertView({ className, model });
 
 		parentNode.insertBefore(alertView.el, parentNode.firstChild);
 		alertView.render();
@@ -380,162 +372,142 @@ const DatatableView = BaseView.extend({
 ////////////////////////////////////////////////////////////////////////////////
 
 /* exported FilteredDatatableView */
-const FilteredDatatableView = DatatableView.extend(
-	{
-		// Property
+const FilteredDatatableView = DatatableView.extend({
+	// Property
 
-		attributes: { 'data-view': 'FilteredDatatableView' },
+	attributes: { 'data-view': 'FilteredDatatableView' },
 
-		orderCellsTop: true,
+	orderCellsTop: true,
 
-		// Methods
+	// Methods
 
-		initComplete(settings, json) {
-			DatatableView.prototype.initComplete.call(
-				this,
-				settings,
-				json
-			);
+	initComplete(settings, json) {
+		DatatableView.prototype.initComplete.call(this, settings, json);
 
-			for (
-				let index = 0, length = this.datatable.columns()[0].length;
-				index < length;
-				index++
-			) {
-				const field = this.el.querySelector(
-					`[data-column-index="${index}"]`
-				);
-				if (field) {
-					this.el.querySelector(`[data-column-index="${index}"]`).value =
-						this.datatable.column(index).search() || '';
-				}
+		for (
+			let index = 0, length = this.datatable.columns()[0].length;
+			index < length;
+			index++
+		) {
+			const field = this.el.querySelector(`[data-column-index="${index}"]`);
+			if (field) {
+				this.el.querySelector(`[data-column-index="${index}"]`).value =
+					this.datatable.column(index).search() || '';
 			}
-		},
-
-		buildTable() {
-			return DatatableView.prototype.buildTable
-				.call(this)
-				.then(newTable => {
-					const thead = newTable.appendChild(
-						document.createElement('thead')
-					);
-
-					const tr1 = thead.appendChild(document.createElement('tr'));
-					this.datatableDefinition.columns.forEach(() => {
-						tr1.appendChild(document.createElement('th'));
-					});
-
-					const tr2 = thead.appendChild(document.createElement('tr'));
-
-					const promises = [];
-					this.datatableDefinition.columns.forEach((column, index) => {
-						const th = tr2.appendChild(document.createElement('th'));
-
-						if (column.searchable === false) {
-							return;
-						}
-
-						const title = column.title || column.data;
-
-						if (column.choices) {
-							const select = th.appendChild(
-								document.createElement('select')
-							);
-							select.classList.add('form-control');
-							select.setAttribute('aria-label', title);
-							select.setAttribute('data-column-index', index);
-
-							select.addEventListener('change', () => {
-								this.datatable
-									.columns(index)
-									.search(select.value)
-									.draw();
-							});
-
-							const option0 = select.appendChild(
-								document.createElement('option')
-							);
-							option0.setAttribute('value', '');
-
-							let choices = column.choices;
-							const promise = Promise.resolve()
-								.then(() => {
-									if (Array.isArray(choices)) {
-										choices = choices.slice(0);
-									} else if (typeof choices === 'string') {
-										option0.innerHTML = `Loading&hellip;`;
-										return doAjax({
-											url: choices
-										}).then(({data}) => {
-											choices = data;
-										});
-									}
-								})
-								.then(() => {
-									if (column.choicesMap) {
-										column.choicesMap = stringToFunction(
-											column.choicesMap
-										);
-										choices = column.choicesMap(choices);
-									}
-
-									if (choices[0].value !== '') {
-										choices.unshift({
-											text: `Any ${column.title || column.data}`,
-											value: ''
-										});
-									}
-
-									select.removeChild(option0);
-									choices.forEach(choice => {
-										const option = select.appendChild(
-											document.createElement('option')
-										);
-										option.textContent = choice.text || choice.value;
-										option.setAttribute(
-											'value',
-											choice.value != null
-												? choice.value
-												: choice.text
-										);
-									});
-								});
-							promises.push(promise);
-						} else {
-							const input = th.appendChild(
-								document.createElement('input')
-							);
-							input.classList.add('form-control');
-							input.setAttribute('aria-label', `Filter by ${title}`);
-							input.setAttribute('data-column-index', index);
-
-							const eventHandler = () => {
-								this.datatable
-									.columns(index)
-									.search(input.value)
-									.draw();
-							};
-
-							input.addEventListener('change', eventHandler);
-							input.addEventListener('keyup', eventHandler);
-						}
-					});
-
-					return Promise.all(promises).then(() => {
-						return newTable;
-					});
-				});
-		},
-
-		resetFilters() {
-			const filters = this.el.querySelectorAll(`[data-column-index]`);
-			for (let index = 0, length = filters.length; index < length; index++) {
-				const filter = filters[index];
-				const columnIndex = filter.getAttribute('data-column-index');
-				filter.value = '';
-				this.datatable.column(columnIndex).search('');
-			}
-			this.datatable.draw();
 		}
+	},
+
+	buildTable() {
+		return DatatableView.prototype.buildTable.call(this).then(newTable => {
+			const thead = newTable.appendChild(document.createElement('thead'));
+
+			const tr1 = thead.appendChild(document.createElement('tr'));
+			this.datatableDefinition.columns.forEach(() => {
+				tr1.appendChild(document.createElement('th'));
+			});
+
+			const tr2 = thead.appendChild(document.createElement('tr'));
+
+			const promises = [];
+			this.datatableDefinition.columns.forEach((column, index) => {
+				const th = tr2.appendChild(document.createElement('th'));
+
+				if (column.searchable === false) {
+					return;
+				}
+
+				const title = column.title || column.data;
+
+				if (column.choices) {
+					const select = th.appendChild(document.createElement('select'));
+					select.classList.add('form-control');
+					select.setAttribute('aria-label', title);
+					select.setAttribute('data-column-index', index);
+
+					select.addEventListener('change', () => {
+						this.datatable
+							.columns(index)
+							.search(select.value)
+							.draw();
+					});
+
+					const option0 = select.appendChild(
+						document.createElement('option')
+					);
+					option0.setAttribute('value', '');
+
+					let choices = column.choices;
+					const promise = Promise.resolve()
+						.then(() => {
+							if (Array.isArray(choices)) {
+								choices = choices.slice(0);
+							} else if (typeof choices === 'string') {
+								option0.innerHTML = `Loading&hellip;`;
+								return doAjax({
+									url: choices
+								}).then(({ data }) => {
+									choices = data;
+								});
+							}
+						})
+						.then(() => {
+							if (column.choicesMap) {
+								column.choicesMap = stringToFunction(column.choicesMap);
+								choices = column.choicesMap(choices);
+							}
+
+							if (choices[0].value !== '') {
+								choices.unshift({
+									text: `Any ${column.title || column.data}`,
+									value: ''
+								});
+							}
+
+							select.removeChild(option0);
+							choices.forEach(choice => {
+								const option = select.appendChild(
+									document.createElement('option')
+								);
+								option.textContent = choice.text || choice.value;
+								option.setAttribute(
+									'value',
+									choice.value != null ? choice.value : choice.text
+								);
+							});
+						});
+					promises.push(promise);
+				} else {
+					const input = th.appendChild(document.createElement('input'));
+					input.classList.add('form-control');
+					input.setAttribute('aria-label', `Filter by ${title}`);
+					input.setAttribute('data-column-index', index);
+
+					const eventHandler = () => {
+						this.datatable
+							.columns(index)
+							.search(input.value)
+							.draw();
+					};
+
+					input.addEventListener('change', eventHandler);
+					input.addEventListener('keyup', eventHandler);
+				}
+			});
+
+			return Promise.all(promises).then(() => {
+				return newTable;
+			});
+		});
+	},
+
+	resetFilters() {
+		const filters = this.el.querySelectorAll(`[data-column-index]`);
+		for (let index = 0, length = filters.length; index < length; index++) {
+			const filter = filters[index];
+			const columnIndex = filter.getAttribute('data-column-index');
+			filter.value = '';
+			this.datatable.column(columnIndex).search('');
+		}
+		this.datatable.draw();
 	}
-);
+});

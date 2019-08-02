@@ -973,16 +973,6 @@ const LoginModel = BaseModel.extend({
 			if (!this.isLoggedIn()) {
 				return false;
 			} else {
-				console.log(
-					options.ignoreLastFetched !== true &&
-						this.lastFetched &&
-						Math.abs(
-							(new Date().getTime() - this.lastFetched.getTime()) /
-								1000 /
-								60 /
-								60
-						) < 20
-				);
 				if (
 					options.ignoreLastFetched !== true &&
 					this.lastFetched &&
@@ -1002,5 +992,10 @@ const LoginModel = BaseModel.extend({
 				);
 			}
 		});
+	},
+
+	webStorageSave(options) {
+		this.unset('pwd', { silent: true });
+		return BaseModel.prototype.webStorageSave.call(this, options);
 	}
 });

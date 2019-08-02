@@ -317,27 +317,31 @@ const DatatableView = BaseView.extend({
 					recordsFiltered: data['@odata.count']
 				});
 			},
-			({ jqXHR }) => {
-				const errorCode = jqXHR.status;
-
-				let errorMessage;
-				if (errorCode === 404) {
-					errorMessage = 'Data not found.';
-				} else {
-					errorMessage =
-						jqXHR.responseJSON &&
-						jqXHR.responseJSON.error &&
-						jqXHR.responseJSON.error.message
-							? jqXHR.responseJSON.error.message
-							: jqXHR.responseText;
-				}
-
-				this.showAlert(
-					`<strong>An error has occured.</strong> Error code: ${errorCode}. Error message: ${errorMessage}`
-				);
-				callback({ data: [], draw, recordsTotal: 0, recordsFiltered: 0 });
+			errorData => {
+				this.ajaxFetchError(errorData, draw, callback);
 			}
 		);
+	},
+
+	ajaxFetchError({ jqXHR }, draw, callback) {
+		const errorCode = jqXHR.status;
+
+		let errorMessage;
+		if (errorCode === 404) {
+			errorMessage = 'Data not found.';
+		} else {
+			errorMessage =
+				jqXHR.responseJSON &&
+				jqXHR.responseJSON.error &&
+				jqXHR.responseJSON.error.message
+					? jqXHR.responseJSON.error.message
+					: jqXHR.responseText;
+		}
+
+		this.showAlert(
+			`<strong>An error has occured.</strong> Error code: ${errorCode}. Error message: ${errorMessage}`
+		);
+		callback({ data: [], draw, recordsTotal: 0, recordsFiltered: 0 });
 	},
 
 	initComplete() {},
@@ -373,13 +377,9 @@ const DatatableView = BaseView.extend({
 
 /* exported FilteredDatatableView */
 const FilteredDatatableView = DatatableView.extend({
-	// Property
-
 	attributes: { 'data-view': 'FilteredDatatableView' },
 
 	orderCellsTop: true,
-
-	// Methods
 
 	initComplete(settings, json) {
 		DatatableView.prototype.initComplete.call(this, settings, json);

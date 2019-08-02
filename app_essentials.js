@@ -742,7 +742,7 @@ const BaseModel = Backbone.Model.extend({
 
 	// Web Storage
 
-	webStorage: localStorage,
+	webStorage: sessionStorage,
 
 	webStorageFetch(options) {
 		const webStorage =
@@ -816,7 +816,7 @@ const BaseCollection = Backbone.Collection.extend({
 
 	// Web Storage
 
-	webStorage: localStorage,
+	webStorage: sessionStorage,
 
 	webStorageFetch(options) {
 		const webStorage =
@@ -973,6 +973,16 @@ const LoginModel = BaseModel.extend({
 			if (!this.isLoggedIn()) {
 				return false;
 			} else {
+				console.log(
+					options.ignoreLastFetched !== true &&
+						this.lastFetched &&
+						Math.abs(
+							(new Date().getTime() - this.lastFetched.getTime()) /
+								1000 /
+								60 /
+								60
+						) < 20
+				);
 				if (
 					options.ignoreLastFetched !== true &&
 					this.lastFetched &&

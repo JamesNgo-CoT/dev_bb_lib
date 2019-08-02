@@ -75,10 +75,11 @@ const DatatableView = BaseView.extend({
 	stateSave: false,
 
 	webStorage: function() {
+		console.log('WEB STORAGE', this, this.collection, _.result(this.collection, 'webStorage'));
 		if (this.collection) {
-			return _.result(this.collection, 'webStorage') || localStorage;
+			return _.result(this.collection, 'webStorage') || sessionStorage;
 		} else {
-			return localStorage;
+			return sessionStorage;
 		}
 	},
 
@@ -88,7 +89,6 @@ const DatatableView = BaseView.extend({
 	},
 
 	render() {
-		// Clean up.
 		this.removeDatatable();
 		while (this.el.firstChild) {
 			this.removeChild(this.el.firstChild);
@@ -189,6 +189,8 @@ const DatatableView = BaseView.extend({
 		const webStorageKey =
 			_.result(this, 'webStorageKey') ||
 			(this.collection ? _.result(this.collection, 'webStorageKey') : null);
+
+			console.log('STATE SAVE CALLBACK', webStorageKey);
 
 		webStorage.setItem(webStorageKey, JSON.stringify(data));
 	},

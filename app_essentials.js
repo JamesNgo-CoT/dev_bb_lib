@@ -742,7 +742,7 @@ const BaseModel = Backbone.Model.extend({
 
 	// Web Storage
 
-	webStorage: sessionStorage,
+	webStorage: localStorage,
 
 	webStorageFetch(options) {
 		const webStorage =
@@ -762,6 +762,8 @@ const BaseModel = Backbone.Model.extend({
 			_.result(options, 'webStorageKey') || _.result(this, 'webStorageKey');
 
 		if (webStorage && webStorageKey) {
+			console.log('BASE MODEL', 'WEBSTORAGE SAVE');
+
 			webStorage.setItem(
 				webStorageKey,
 				JSON.stringify(this.toJSON(options))
@@ -776,6 +778,8 @@ const BaseModel = Backbone.Model.extend({
 			_.result(options, 'webStorageKey') || _.result(this, 'webStorageKey');
 
 		if (webStorage && webStorageKey) {
+			console.log('BASE MODEL', 'WEBSTORAGE DESTROY');
+
 			webStorage.removeItem(webStorageKey);
 		}
 	}
@@ -816,7 +820,7 @@ const BaseCollection = Backbone.Collection.extend({
 
 	// Web Storage
 
-	webStorage: sessionStorage,
+	webStorage: localStorage,
 
 	webStorageFetch(options) {
 		const webStorage =
@@ -969,32 +973,53 @@ const LoginModel = BaseModel.extend({
 	},
 
 	authentication(options = {}) {
-		return Promise.resolve().then(() => {
-			if (!this.isLoggedIn()) {
-				return false;
-			} else {
-				if (
-					options.ignoreLastFetched !== true &&
-					this.lastFetched &&
-					Math.abs(
-						(new Date().getTime() - this.lastFetched.getTime()) /
-							1000 /
-							60 /
-							60
-					) < 20
-				) {
-					return this.isLoggedIn();
-				}
+		console.log('LOGIN MODEL', 'AUTHENTICATION', 'START');
 
-				return this.fetch(options).then(
-					() => this.isLoggedIn(),
-					() => this.isLoggedIn()
-				);
-			}
-		});
+		return Promise.resolve()
+			.then(() => {
+				if (!this.isLoggedIn()) {
+					return false;
+				} else {
+					console.log('RE FETCH?', options.ignoreLastFetched !== true &&
+						this.lastFetched &&
+						Math.abs(
+							(new Date().getTime() - this.lastFetched.getTime()) /
+								1000 /
+								60 /
+								60
+						) < 1, new Date(), this.lastFetched);
+					if (
+						options.ignoreLastFetched !== true &&
+						this.lastFetched &&
+						Math.abs(
+							(new Date().getTime() - this.lastFetched.getTime()) /
+								1000 /
+								60 /
+								60
+						) < 1
+					) {
+						return this.isLoggedIn();
+					}
+
+					return this.fetch(options).then(
+						() => this.isLoggedIn(),
+						() => {
+							this.clear();
+							this.isLoggedIn();
+						}
+					);
+				}
+			})
+			.then(returnValue => {
+				console.log('LOGIN MODEL', 'AUTHENTICATION', 'END', returnValue);
+
+				return returnValue;
+			});
 	},
 
 	webStorageSave(options) {
+		console.log('LOGIN MODEL', 'WEBSTORAGE SAVE');
+
 		this.unset('pwd', { silent: true });
 		return BaseModel.prototype.webStorageSave.call(this, options);
 	}

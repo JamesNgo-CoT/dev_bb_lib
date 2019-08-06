@@ -76,9 +76,9 @@ const DatatableView = BaseView.extend({
 
 	webStorage: function() {
 		if (this.collection) {
-			return _.result(this.collection, 'webStorage') || sessionStorage;
+			return _.result(this.collection, 'webStorage') || localStorage;
 		} else {
-			return sessionStorage;
+			return localStorage;
 		}
 	},
 

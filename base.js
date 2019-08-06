@@ -9,8 +9,7 @@ function doAjax(options) {
 	return new Promise((resolve, reject) => {
 		$.ajax(options).then(
 			(data, textStatus, jqXHR) => resolve({ data, textStatus, jqXHR }),
-			(jqXHR, textStatus, errorThrown) =>
-				reject({ jqXHR, textStatus, errorThrown })
+			(jqXHR, textStatus, errorThrown) => reject({ jqXHR, textStatus, errorThrown })
 		);
 	});
 }
@@ -41,15 +40,9 @@ function loadScripts(...urls) {
 			return new Promise((resolve, reject) => {
 				var script = document.createElement('script');
 				script.setAttribute('src', url);
-				script.onerror = () => {
-					reject();
-				};
-				script.onload = () => {
-					resolve();
-				};
-				script.onreadystatechange = () => {
-					resolve();
-				};
+				script.onerror = () => reject();
+				script.onload = () => resolve();
+				script.onreadystatechange = () => resolve();
 				document.getElementsByTagName('head')[0].appendChild(script);
 			});
 		})
@@ -74,21 +67,13 @@ function stringToFunction(str) {
 /* exported toQueryString */
 function toQueryString(queryObject) {
 	if (Array.isArray(queryObject)) {
-		return queryObject
-			.map(val => {
-				return toQueryString(val);
-			})
-			.join(',');
+		return queryObject.map(value => toQueryString(value)).join(',');
 	}
 
 	if (typeof queryObject === 'object' && queryObject !== null) {
 		return Object.keys(queryObject)
-			.filter(key => {
-				return Object.prototype.hasOwnProperty.call(queryObject, key);
-			})
-			.map(key => {
-				return `${key}=${toQueryString(queryObject[key])}`;
-			})
+			.filter(key => Object.prototype.hasOwnProperty.call(queryObject, key))
+			.map(key => `${key}=${toQueryString(queryObject[key])}`)
 			.join('&');
 	}
 
@@ -123,9 +108,7 @@ function toQueryObject(queryString) {
 	}
 
 	if (queryString.indexOf(',') !== -1) {
-		return queryString.split(',').map(value => {
-			return toQueryObject(value);
-		});
+		return queryString.split(',').map(value => toQueryObject(value));
 	}
 
 	if (queryString.indexOf('=') !== -1) {
@@ -155,7 +138,6 @@ function toQueryObject(queryString) {
 			value = null;
 			break;
 	}
-
 	return value;
 }
 
@@ -176,9 +158,7 @@ $.ajaxSetup({
 if (window.cot_app) {
 	const originalRender = window.cot_app.prototype.render;
 	window.cot_app.prototype.render = function() {
-		this.titleElement = document
-			.querySelector('#app-header h1')
-			.appendChild(document.createElement('span'));
+		this.titleElement = document.querySelector('#app-header h1').appendChild(document.createElement('span'));
 		this.titleElement.setAttribute('tabindex', '-1');
 
 		return originalRender.call(this);
@@ -204,10 +184,7 @@ if (window.cot_app) {
 
 if (window.cot_form) {
 	const originalAddformfield = window.cot_form.prototype.addformfield;
-	window.cot_form.prototype.addformfield = function(
-		fieldDefinition,
-		fieldContainer
-	) {
+	window.cot_form.prototype.addformfield = function(fieldDefinition, fieldContainer) {
 		originalAddformfield.call(this, fieldDefinition, fieldContainer);
 
 		if (fieldDefinition['readOnly'] === true) {
@@ -216,21 +193,15 @@ if (window.cot_form) {
 				case 'number':
 				case 'password':
 				case 'text':
-					fieldContainer
-						.querySelector(`[type="${fieldDefinition['type']}"]`)
-						.setAttribute('readonly', '');
+					fieldContainer.querySelector(`[type="${fieldDefinition['type']}"]`).setAttribute('readonly', '');
 					break;
 
 				case 'phone':
-					fieldContainer
-						.querySelector('[type="tel"]')
-						.setAttribute('readonly', '');
+					fieldContainer.querySelector('[type="tel"]').setAttribute('readonly', '');
 					break;
 
 				case 'textarea':
-					fieldContainer
-						.querySelector('textarea')
-						.setAttribute('readonly', '');
+					fieldContainer.querySelector('textarea').setAttribute('readonly', '');
 					break;
 			}
 		}
@@ -251,12 +222,7 @@ if (window.cot_form) {
 if (window.CotForm) {
 	const originalRender = window.CotForm.prototype.render;
 	window.CotForm.prototype.render = function(...args) {
-		function renderLoop({
-			definition,
-			renderSection,
-			renderRow,
-			renderField
-		}) {
+		function renderLoop({ definition, renderSection, renderRow, renderField }) {
 			const renderPromises = [];
 
 			const sections = definition.sections;
@@ -270,9 +236,7 @@ if (window.CotForm) {
 					const fields = row.fields;
 					if (fields) {
 						fields.forEach(field => {
-							renderPromises.push(
-								renderField({ definition, section, row, field })
-							);
+							renderPromises.push(renderField({ definition, section, row, field }));
 						});
 					}
 
@@ -280,9 +244,7 @@ if (window.CotForm) {
 					if (grid) {
 						const fields = grid.fields;
 						fields.forEach(field => {
-							renderPromises.push(
-								renderField({ definition, section, row, field, grid })
-							);
+							renderPromises.push(renderField({ definition, section, row, field, grid }));
 						});
 					}
 
@@ -293,14 +255,7 @@ if (window.CotForm) {
 							const fields = repeatControlRow.fields;
 							fields.forEach(field => {
 								renderPromises.push(
-									renderField({
-										definition,
-										section,
-										row,
-										field,
-										repeatControl,
-										repeatControlRow
-									})
+									renderField({ definition, section, row, field, repeatControl, repeatControlRow })
 								);
 							});
 						});
@@ -331,37 +286,16 @@ if (window.CotForm) {
 					renderSection({ definition, section }) {
 						const renderer = stringToFunction(section.preRender);
 						if (renderer) {
-							return renderer.call(this, {
-								cotForm,
-								model,
-								view,
-								definition,
-								section
-							});
+							return renderer.call(this, { cotForm, model, view, definition, section });
 						}
 					},
 					renderRow({ definition, section, row }) {
 						const renderer = stringToFunction(row.preRender);
 						if (renderer) {
-							return renderer.call(this, {
-								cotForm,
-								model,
-								view,
-								definition,
-								section,
-								row
-							});
+							return renderer.call(this, { cotForm, model, view, definition, section, row });
 						}
 					},
-					renderField({
-						definition,
-						section,
-						row,
-						field,
-						grid,
-						repeatControl,
-						repeatControlRow
-					}) {
+					renderField({ definition, section, row, field, grid, repeatControl, repeatControlRow }) {
 						return Promise.resolve()
 							.then(() => {
 								if (field.choices) {
@@ -390,16 +324,11 @@ if (window.CotForm) {
 							})
 							.then(() => {
 								if (field.choicesMap) {
-									field.choicesMap = stringToFunction(
-										field.choicesMap
-									);
+									field.choicesMap = stringToFunction(field.choicesMap);
 									field.choices = field.choicesMap(field.choices);
 								}
 
-								if (
-									field.type === 'dropdown' &&
-									field.choices[0].value !== ''
-								) {
+								if (field.type === 'dropdown' && field.choices[0].value !== '') {
 									field.choices.unshift({
 										text: '- Select -',
 										value: ''
@@ -410,19 +339,13 @@ if (window.CotForm) {
 									let value;
 									if (field.value != null) {
 										value = field.value;
-									} else if (
-										field.bindTo != null &&
-										model &&
-										model.has(field.bindTo)
-									) {
+									} else if (field.bindTo != null && model && model.has(field.bindTo)) {
 										value = model.get(field.bindTo);
 									}
 
 									if (value != null) {
 										const choices = field.choices.map(choice =>
-											choice.value != null
-												? choice.value
-												: choice.text
+											choice.value != null ? choice.value : choice.text
 										);
 										if (choices.indexOf(value) === -1) {
 											field.choices.unshift({ text: value, value });
@@ -458,37 +381,16 @@ if (window.CotForm) {
 					renderSection({ definition, section }) {
 						const renderer = stringToFunction(section.postRender);
 						if (renderer) {
-							return renderer.call(this, {
-								cotForm,
-								model,
-								view,
-								definition,
-								section
-							});
+							return renderer.call(this, { cotForm, model, view, definition, section });
 						}
 					},
 					renderRow({ definition, section, row }) {
 						const renderer = stringToFunction(row.postRender);
 						if (renderer) {
-							return renderer.call(this, {
-								cotForm,
-								model,
-								view,
-								definition,
-								section,
-								row
-							});
+							return renderer.call(this, { cotForm, model, view, definition, section, row });
 						}
 					},
-					renderField({
-						definition,
-						section,
-						row,
-						field,
-						grid,
-						repeatControl,
-						repeatControlRow
-					}) {
+					renderField({ definition, section, row, field, grid, repeatControl, repeatControlRow }) {
 						const renderer = stringToFunction(field.postRender);
 						if (renderer) {
 							return renderer.call(this, {
@@ -527,28 +429,16 @@ if (window.CotForm) {
 
 		if (this._isRendered) {
 			var sections = this._definition['sections'] || [];
-			for (
-				let sectionIndex = 0, sectionsLength = sections.length;
-				sectionIndex < sectionsLength;
-				sectionIndex++
-			) {
+			for (let sectionIndex = 0, sectionsLength = sections.length; sectionIndex < sectionsLength; sectionIndex++) {
 				var rows = sections[sectionIndex].rows;
-				for (
-					let rowIndex = 0, rowsLength = rows.length;
-					rowIndex < rowsLength;
-					rowIndex++
-				) {
+				for (let rowIndex = 0, rowsLength = rows.length; rowIndex < rowsLength; rowIndex++) {
 					const row = rows[rowIndex];
 					if (row.repeatControl && row.repeatControl.bindTo) {
-						const repeatControlCollection = model.get(
-							row.repeatControl.bindTo
-						);
+						const repeatControlCollection = model.get(row.repeatControl.bindTo);
 						let index = 0;
 						while (index < repeatControlCollection.models.length) {
 							const model = repeatControlCollection.at(index);
-							if (
-								JSON.stringify(model.toJSON()) === JSON.stringify({})
-							) {
+							if (JSON.stringify(model.toJSON()) === JSON.stringify({})) {
 								repeatControlCollection.remove(model);
 								continue;
 							}
@@ -566,56 +456,48 @@ if (window.CotForm) {
 // BACKBONE SETUP
 ////////////////////////////////////////////////////////////////////////////////
 
-const originalBackboneSync = Backbone.sync;
-Backbone.sync = function(method, model, options = {}) {
-	return new Promise((resolve, reject) => {
-		options.headers = options.headers || {};
-		options.headers.Accept =
-			options.headers.Accept || 'application/json; charset=utf-8';
+Backbone.sync = (originalBackboneSync =>
+	function(method, model, options = {}) {
+		return new Promise((resolve, reject) => {
+			options.headers = options.headers || {};
+			options.headers.Accept = options.headers.Accept || 'application/json; charset=utf-8';
 
-		if (!options.headers.Authorization) {
-			const loginModel =
-				_.result(model, 'loginModel') || LoginModel.instance;
-			if (loginModel && loginModel !== model && !loginModel.isNew()) {
-				options.headers.Authorization = `AuthSession ${loginModel.get(
-					loginModel.idAttribute
-				)}`;
-			}
-		}
-
-		if (method === 'create' || method === 'update' || method === 'patch') {
-			options.contentType =
-				options.contentType || 'application/json; charset=utf-8';
-
-			if (!options.data) {
-				let json = options.attrs || model.toJSON(options);
-
-				delete json['@odata.context'];
-				delete json['@odata.etag'];
-				delete json['__CreatedOn'];
-				delete json['__ModifiedOn'];
-				delete json['__Owner'];
-
-				const adjustSyncJson =
-					options.adjustSyncJson || model.adjustSyncJson;
-				if (adjustSyncJson) {
-					json = adjustSyncJson(json);
+			if (!options.headers.Authorization) {
+				const loginModel = _.result(model, 'loginModel') || LoginModel.instance;
+				if (loginModel && loginModel !== model && !loginModel.isNew()) {
+					options.headers.Authorization = `AuthSession ${loginModel.get(loginModel.idAttribute)}`;
 				}
-
-				options.data = JSON.stringify(json);
 			}
-		}
 
-		originalBackboneSync.call(this, method, model, options).then(
-			(data, textStatus, jqXHR) => {
-				resolve({ data, textStatus, jqXHR });
-			},
-			(jqXHR, textStatus, errorThrown) => {
-				reject({ jqXHR, textStatus, errorThrown });
+			if (method === 'create' || method === 'update' || method === 'patch') {
+				options.contentType = options.contentType || 'application/json; charset=utf-8';
+
+				if (!options.data) {
+					let json = options.attrs || model.toJSON(options);
+
+					delete json['@odata.context'];
+					delete json['@odata.etag'];
+					delete json['__CreatedOn'];
+					delete json['__ModifiedOn'];
+					delete json['__Owner'];
+
+					const adjustSyncJson = options.adjustSyncJson || model.adjustSyncJson;
+					if (adjustSyncJson) {
+						json = adjustSyncJson(json);
+					}
+
+					options.data = JSON.stringify(json);
+				}
 			}
-		);
-	});
-};
+
+			originalBackboneSync
+				.call(this, method, model, options)
+				.then(
+					(data, textStatus, jqXHR) => resolve({ data, textStatus, jqXHR }),
+					(jqXHR, textStatus, errorThrown) => reject({ jqXHR, textStatus, errorThrown })
+				);
+		});
+	})(Backbone.sync);
 
 ////////////////////////////////////////////////////////////////////////////////
 // BACKBONE CLASSES
@@ -651,10 +533,7 @@ const BaseRouter = Backbone.Router.extend({
 			oldCallback = this[name];
 		}
 
-		if (
-			typeof oldCallback === 'function' &&
-			oldCallback !== this.routeDefault
-		) {
+		if (typeof oldCallback === 'function' && oldCallback !== this.routeDefault) {
 			const newCallback = function(...args) {
 				this.lastFragment = Backbone.history.getFragment();
 				return oldCallback.call(this, ...args);
@@ -664,10 +543,7 @@ const BaseRouter = Backbone.Router.extend({
 				callback = newCallback;
 			} else if (typeof name === 'function') {
 				name = newCallback;
-			} else if (
-				typeof name === 'string' &&
-				typeof this[name] === 'function'
-			) {
+			} else if (typeof name === 'string' && typeof this[name] === 'function') {
 				this[name] = newCallback;
 			}
 		}
@@ -685,10 +561,7 @@ const BaseRouter = Backbone.Router.extend({
 			}
 		}
 
-		if (
-			cleanupFunctionReturnValue !== false &&
-			typeof callback === 'function'
-		) {
+		if (cleanupFunctionReturnValue !== false && typeof callback === 'function') {
 			Promise.resolve()
 				.then(() => {
 					return callback.call(this, ...args);
@@ -714,19 +587,16 @@ const BaseModel = Backbone.Model.extend({
 			return typeof url === 'function' ? url.call(this) : url;
 		}
 
-		const base =
-			_.result(this, 'urlRoot') || _.result(this.collection, 'url');
+		const base = _.result(this, 'urlRoot') || _.result(this.collection, 'url');
 		const id = this.get(this.idAttribute);
 		return `${base.replace(/\/$/, '')}('${encodeURIComponent(id)}')`;
 	},
 
 	sync(method, model, options) {
-		return Backbone.Model.prototype.sync
-			.call(this, method, model, options)
-			.then(returnValue => {
-				this.lastSyncData = JSON.stringify(model.toJSON());
-				return returnValue;
-			});
+		return Backbone.Model.prototype.sync.call(this, method, model, options).then(returnValue => {
+			this.lastSyncData = JSON.stringify(model.toJSON());
+			return returnValue;
+		});
 	},
 
 	hasChanged() {
@@ -737,13 +607,9 @@ const BaseModel = Backbone.Model.extend({
 
 	webStorageFetch(options) {
 		const webStorage =
-			_.result(options, 'webStorage') ||
-			_.result(this, 'webStorage') ||
-			_.result(BaseModel, 'webStorage');
+			_.result(options, 'webStorage') || _.result(this, 'webStorage') || _.result(BaseModel, 'webStorage');
 		const webStorageKey =
-			_.result(options, 'webStorageKey') ||
-			_.result(this, 'webStorageKey') ||
-			_.result(BaseModel, 'webStorageKey');
+			_.result(options, 'webStorageKey') || _.result(this, 'webStorageKey') || _.result(BaseModel, 'webStorageKey');
 
 		if (webStorage && webStorageKey) {
 			this.set(JSON.parse(webStorage.getItem(webStorageKey)), options);
@@ -752,31 +618,20 @@ const BaseModel = Backbone.Model.extend({
 
 	webStorageSave(options) {
 		const webStorage =
-			_.result(options, 'webStorage') ||
-			_.result(this, 'webStorage') ||
-			_.result(BaseModel, 'webStorage');
+			_.result(options, 'webStorage') || _.result(this, 'webStorage') || _.result(BaseModel, 'webStorage');
 		const webStorageKey =
-			_.result(options, 'webStorageKey') ||
-			_.result(this, 'webStorageKey') ||
-			_.result(BaseModel, 'webStorageKey');
+			_.result(options, 'webStorageKey') || _.result(this, 'webStorageKey') || _.result(BaseModel, 'webStorageKey');
 
 		if (webStorage && webStorageKey) {
-			webStorage.setItem(
-				webStorageKey,
-				JSON.stringify(this.toJSON(options))
-			);
+			webStorage.setItem(webStorageKey, JSON.stringify(this.toJSON(options)));
 		}
 	},
 
 	webStorageDestroy(options) {
 		const webStorage =
-			_.result(options, 'webStorage') ||
-			_.result(this, 'webStorage') ||
-			_.result(BaseModel, 'webStorage');
+			_.result(options, 'webStorage') || _.result(this, 'webStorage') || _.result(BaseModel, 'webStorage');
 		const webStorageKey =
-			_.result(options, 'webStorageKey') ||
-			_.result(this, 'webStorageKey') ||
-			_.result(BaseModel, 'webStorageKey');
+			_.result(options, 'webStorageKey') || _.result(this, 'webStorageKey') || _.result(BaseModel, 'webStorageKey');
 
 		if (webStorage && webStorageKey) {
 			webStorage.removeItem(webStorageKey);
@@ -805,12 +660,10 @@ const BaseCollection = Backbone.Collection.extend({
 	},
 
 	sync(method, model, options) {
-		return Backbone.Collection.prototype.sync
-			.call(this, method, model, options)
-			.then(returnValue => {
-				this.lastSyncData = JSON.stringify(model.toJSON());
-				return returnValue;
-			});
+		return Backbone.Collection.prototype.sync.call(this, method, model, options).then(returnValue => {
+			this.lastSyncData = JSON.stringify(model.toJSON());
+			return returnValue;
+		});
 	},
 
 	hasChanged() {
@@ -895,11 +748,7 @@ const LoginModel = BaseModel.extend({
 	},
 
 	save(attributes = {}, options = {}) {
-		const {
-			app = _.result(this, 'app'),
-			user = this.get('user'),
-			pwd = this.get('pwd')
-		} = attributes;
+		const { app = _.result(this, 'app'), user = this.get('user'), pwd = this.get('pwd') } = attributes;
 
 		return BaseModel.prototype.save.call(this, { app, user, pwd }, options);
 	},
@@ -913,9 +762,7 @@ const LoginModel = BaseModel.extend({
 	destroy(options = {}) {
 		options.headers = options.headers || {};
 		options.headers.Authorization = this.get('userID');
-		return BaseModel.prototype.destroy
-			.call(this, options)
-			.then(() => this.clear(), () => this.clear());
+		return BaseModel.prototype.destroy.call(this, options).then(() => this.clear(), () => this.clear());
 	},
 
 	isLoggedIn() {
@@ -937,26 +784,17 @@ const LoginModel = BaseModel.extend({
 			} else {
 				console.log(
 					'DONT FETCH',
-					!!(options.ignoreLastAuthentication !== true &&
+					!!(
+						options.ignoreLastAuthentication !== true &&
 						this.lastAuthentication &&
-						Math.abs(
-							(new Date().getTime() -
-								this.lastAuthentication.getTime()) /
-								1000 /
-								60 /
-								60
-						) < 5)
+						Math.abs((new Date().getTime() - this.lastAuthentication.getTime()) / 1000 / 60 / 60) < 5
+					)
 				);
 
 				if (
 					options.ignoreLastAuthentication !== true &&
 					this.lastAuthentication &&
-					Math.abs(
-						(new Date().getTime() - this.lastAuthentication.getTime()) /
-							1000 /
-							60 /
-							60
-					) < 5
+					Math.abs((new Date().getTime() - this.lastAuthentication.getTime()) / 1000 / 60 / 60) < 5
 				) {
 					return this.isLoggedIn();
 				}

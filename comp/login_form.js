@@ -20,8 +20,7 @@ const LoginFormView = FormView.extend({
 						fields: [
 							{
 								type: 'html',
-								html:
-									'Login using your City of Toronto username and password.'
+								html: 'Login using your City of Toronto username and password.'
 							}
 						]
 					},
@@ -83,11 +82,7 @@ const LoginFormView = FormView.extend({
 		buttonText.textContent = 'Login';
 
 		if (isSuccessful === true) {
-			this.showAlert(
-				'<strong>Login successful.</strong> You have successfully logged in.',
-				0,
-				'alert-success'
-			);
+			this.showAlert('<strong>Login successful.</strong> You have successfully logged in.', 0, 'alert-success');
 		} else if (isSuccessful === false) {
 			this.showAlert(
 				'<strong>Login failed.</strong> Please review your user name and password and try again.',

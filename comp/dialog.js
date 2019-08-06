@@ -7,8 +7,7 @@ const DialogModel = BaseModel.extend({
 		size: 'lg',
 		heading: 'HEADING',
 		body: 'BODY',
-		footer:
-			'<button class="btn btn-primary" data-dismiss="modal">Close</button>'
+		footer: '<button class="btn btn-primary" data-dismiss="modal">Close</button>'
 	}
 });
 
@@ -30,12 +29,7 @@ const DialogView = BaseView.extend({
 		},
 
 		['shown.bs.modal']() {
-			console.log(
-				this,
-				this.el,
-				this.el.parentNode,
-				this.el.querySelector('.modal-title span[tabindex="-1"]')
-			);
+			console.log(this, this.el, this.el.parentNode, this.el.querySelector('.modal-title span[tabindex="-1"]'));
 			// this.el.querySelector('.modal-title span[tabindex="-1"]').focus();
 		},
 
@@ -63,10 +57,7 @@ const DialogView = BaseView.extend({
 		this.el.classList.add('modal', 'fade');
 
 		if (this.model.has('id')) {
-			this.el.setAttribute(
-				'aria-labelledby',
-				`${this.model.get('id')}_title`
-			);
+			this.el.setAttribute('aria-labelledby', `${this.model.get('id')}_title`);
 		}
 
 		const dialog = this.el.appendChild(document.createElement('div'));
@@ -97,9 +88,7 @@ const DialogView = BaseView.extend({
 		headerTitle.setAttribute('role', 'heading');
 		headerTitle.setAttribute('aria-level', '2');
 
-		const headerTitleSpan = headerTitle.appendChild(
-			document.createElement('span')
-		);
+		const headerTitleSpan = headerTitle.appendChild(document.createElement('span'));
 		headerTitleSpan.setAttribute('tabindex', '-1');
 
 		const headingContent = this.model.get('heading');

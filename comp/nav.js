@@ -25,9 +25,7 @@ const NavItemView = BaseView.extend({
 	},
 
 	render() {
-		this.el.innerHTML = `<a href="#${this.model.escape(
-			'fragment'
-		)}">${this.model.escape('title')}</a>`;
+		this.el.innerHTML = `<a href="#${this.model.escape('fragment')}">${this.model.escape('title')}</a>`;
 
 		if (this.model.get('isActive')) {
 			this.el.classList.add('active');

@@ -33,15 +33,16 @@ npm install datatables.net datatables.net-bs datatables.net-buttons datatables.n
 <script src="/node_modules/datatables.net-buttons-bs/js/buttons.bootstrap.js"></script>
 
 <!-- Core -->
-<script src="<!-- @echo SRC_PATH -->/scripts/lib/app_essentials.js"></script>
+<script src="<!-- @echo SRC_PATH -->/scripts/lib/base.js"></script>
 
 <!-- Components -->
-<script src="<!-- @echo SRC_PATH -->/scripts/lib/comp/loginbutton.js"></script>
-<script src="<!-- @echo SRC_PATH -->/scripts/lib/comp/dialog.js"></script>
+<script src="<!-- @echo SRC_PATH -->/scripts/lib/comp/login_button.js"></script>
+<script src="<!-- @echo SRC_PATH -->/scripts/lib/comp/nav.js"></script>
 <script src="<!-- @echo SRC_PATH -->/scripts/lib/comp/alert.js"></script>
 <script src="<!-- @echo SRC_PATH -->/scripts/lib/comp/form.js"></script>
-<script src="<!-- @echo SRC_PATH -->/scripts/lib/comp/loginform.js"></script>
-<script src="<!-- @echo SRC_PATH -->/scripts/lib/comp/nav.js"></script>
+<script src="<!-- @echo SRC_PATH -->/scripts/lib/comp/login_form.js"></script>
+<script src="<!-- @echo SRC_PATH -->/scripts/lib/comp/dialog.js"></script>
+<script src="<!-- @echo SRC_PATH -->/scripts/lib/comp/login_form_dialog.js"></script>
 <script src="<!-- @echo SRC_PATH -->/scripts/lib/comp/datatable.js"></script>
 ```
 

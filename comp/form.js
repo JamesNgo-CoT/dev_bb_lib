@@ -40,11 +40,8 @@ const FormView = BaseView.extend(
 					}
 				})
 				.then(() => {
-					formDefinition.id =
-						_.result(formDefinition, 'id') || FormView.uniqueId();
-					formDefinition.rootPath =
-						_.result(formDefinition, 'rootPath') ||
-						_.result(this, 'rootPath');
+					formDefinition.id = _.result(formDefinition, 'id') || FormView.uniqueId();
+					formDefinition.rootPath = _.result(formDefinition, 'rootPath') || _.result(this, 'rootPath');
 					formDefinition.useBinding = true;
 
 					// NOTE: Weird behaviour - Assigning functions into existing object changes the function's context to previous instance...
@@ -83,11 +80,8 @@ const FormView = BaseView.extend(
 
 		showAlert(message, sectionIndex, className = 'alert-danger') {
 			let parentNode = this.form;
-
 			if (sectionIndex != null) {
-				parentNode = parentNode.querySelectorAll('.panel-body')[
-					sectionIndex
-				];
+				parentNode = parentNode.querySelectorAll('.panel-body')[sectionIndex];
 			}
 
 			const alertView = new AlertView({
@@ -96,33 +90,32 @@ const FormView = BaseView.extend(
 					message
 				})
 			});
-
 			parentNode.insertBefore(alertView.el, parentNode.firstChild);
-
 			return alertView.render();
 		},
 
 		success() {
 			this.prepareForSubmission();
-
-			this.model.save().then(() => {
-				this.showAlert(
-					'<strong>Submission successful.</strong> You have successfully submitted the form.',
-					0,
-					'alert-success'
-				);
-				this.restoreFromSubmission();
-				this.trigger('success');
-			}, () => {
-				this.showAlert(
-					'<strong>Submission failed.</strong> An error occured while submitting the form.',
-					0,
-					'alert-danger'
-				);
-				this.restoreFromSubmission();
-				this.trigger('failed');
-			});
-
+			this.model.save().then(
+				() => {
+					this.showAlert(
+						'<strong>Submission successful.</strong> You have successfully submitted the form.',
+						0,
+						'alert-success'
+					);
+					this.restoreFromSubmission();
+					this.trigger('success');
+				},
+				() => {
+					this.showAlert(
+						'<strong>Submission failed.</strong> An error occured while submitting the form.',
+						0,
+						'alert-danger'
+					);
+					this.restoreFromSubmission();
+					this.trigger('failed');
+				}
+			);
 		},
 
 		disabledControls: null,
@@ -160,7 +153,6 @@ const FormView = BaseView.extend(
 			if (FormView._uniqueId == null) {
 				FormView._uniqueId = 0;
 			}
-
 			return `FormView_${FormView._uniqueId++}`;
 		}
 	}

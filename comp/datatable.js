@@ -53,9 +53,7 @@ const DatatableView = BaseView.extend({
 				data: 'id',
 				orderable: false,
 				render(data) {
-					return (
-						'<a href=#apps/' + data + ' class=btn btn-default>View</a>'
-					);
+					return '<a href=#apps/' + data + ' class=btn btn-default>View</a>';
 				},
 				searchable: false,
 				width: '57px'
@@ -112,19 +110,12 @@ const DatatableView = BaseView.extend({
 			})
 			.then(() => {
 				// Finalize definition/configuration.
-				datatableDefinition.buttons =
-					_.result(datatableDefinition, 'buttons') ||
-					_.result(this, 'buttons');
-				datatableDefinition.dom =
-					_.result(datatableDefinition, 'dom') || _.result(this, 'dom');
-				datatableDefinition.stateSave =
-					_.result(datatableDefinition, 'stateSave') ||
-					_.result(this, 'stateSave');
-				datatableDefinition.ajax =
-					datatableDefinition.ajax || ((...args) => this.ajax(...args));
+				datatableDefinition.buttons = _.result(datatableDefinition, 'buttons') || _.result(this, 'buttons');
+				datatableDefinition.dom = _.result(datatableDefinition, 'dom') || _.result(this, 'dom');
+				datatableDefinition.stateSave = _.result(datatableDefinition, 'stateSave') || _.result(this, 'stateSave');
+				datatableDefinition.ajax = datatableDefinition.ajax || ((...args) => this.ajax(...args));
 				datatableDefinition.orderCellsTop =
-					_.result(datatableDefinition, 'orderCellsTop') ||
-					_.result(this, 'orderCellsTop');
+					_.result(datatableDefinition, 'orderCellsTop') || _.result(this, 'orderCellsTop');
 
 				// Convert string to functions.
 				datatableDefinition.columns.forEach(column => {
@@ -142,14 +133,11 @@ const DatatableView = BaseView.extend({
 				}
 
 				tempDatatableDefinition.stateSaveCallback =
-					datatableDefinition.stateSaveCallback ||
-					((...args) => this.stateSaveCallback(...args));
+					datatableDefinition.stateSaveCallback || ((...args) => this.stateSaveCallback(...args));
 				tempDatatableDefinition.stateLoadCallback =
-					datatableDefinition.stateLoadCallback ||
-					((...args) => this.stateLoadCallback(...args));
+					datatableDefinition.stateLoadCallback || ((...args) => this.stateLoadCallback(...args));
 				tempDatatableDefinition.initComplete =
-					datatableDefinition.initComplete ||
-					((...args) => this.initComplete(...args));
+					datatableDefinition.initComplete || ((...args) => this.initComplete(...args));
 
 				// Build table.
 				return this.buildTable().then(table => {
@@ -175,22 +163,18 @@ const DatatableView = BaseView.extend({
 
 	stateSaveCallback(settings, data) {
 		const webStorage =
-			_.result(this, 'webStorage') ||
-			(this.collection ? _.result(this.collection, 'webStorage') : null);
+			_.result(this, 'webStorage') || (this.collection ? _.result(this.collection, 'webStorage') : null);
 		const webStorageKey =
-			_.result(this, 'webStorageKey') ||
-			(this.collection ? _.result(this.collection, 'webStorageKey') : null);
+			_.result(this, 'webStorageKey') || (this.collection ? _.result(this.collection, 'webStorageKey') : null);
 
 		webStorage.setItem(webStorageKey, JSON.stringify(data));
 	},
 
 	stateLoadCallback() {
 		const webStorage =
-			_.result(this, 'webStorage') ||
-			(this.collection ? _.result(this.collection, 'webStorage') : null);
+			_.result(this, 'webStorage') || (this.collection ? _.result(this.collection, 'webStorage') : null);
 		const webStorageKey =
-			_.result(this, 'webStorageKey') ||
-			(this.collection ? _.result(this.collection, 'webStorageKey') : null);
+			_.result(this, 'webStorageKey') || (this.collection ? _.result(this.collection, 'webStorageKey') : null);
 
 		try {
 			return JSON.parse(webStorage.getItem(webStorageKey));
@@ -218,38 +202,24 @@ const DatatableView = BaseView.extend({
 			// $filter
 			const filters = columns
 				.map((column, index) => {
-					if (
-						column.searchable &&
-						column.search &&
-						column.search.value &&
-						column.search.value.trim()
-					) {
+					if (column.searchable && column.search && column.search.value && column.search.value.trim()) {
 						switch (datatableDefinition.columns[index].type) {
 							case 'boolean':
 							case 'number':
 							case 'date':
-								return `${column.data} eq ${escapeODataValue(
-									column.search.value
-								)}`;
+								return `${column.data} eq ${escapeODataValue(column.search.value)}`;
 
 							case 'function':
-								return `(${stringToFunction(
-									datatableDefinition.columns[index].filter
-								)(column, datatableDefinition.columns[index])})`;
+								return `(${stringToFunction(datatableDefinition.columns[index].filter)(
+									column,
+									datatableDefinition.columns[index]
+								)})`;
 
 							default:
 								return `(${column.search.value
 									.split(' ')
-									.filter(
-										(value, index, array) =>
-											value && array.indexOf(value) === index
-									)
-									.map(
-										value =>
-											`contains(tolower(${
-												column.data
-											}),'${escapeODataValue(value.toLowerCase())}')`
-									)
+									.filter((value, index, array) => value && array.indexOf(value) === index)
+									.map(value => `contains(tolower(${column.data}),'${escapeODataValue(value.toLowerCase())}')`)
 									.join(' and ')})`;
 						}
 					} else {
@@ -272,9 +242,7 @@ const DatatableView = BaseView.extend({
 							case 'date':
 								return `${orderBy} ${config.dir}`;
 							case 'function':
-								return stringToFunction(
-									datatableDefinition.columns[config.column].orderBy
-								)(
+								return stringToFunction(datatableDefinition.columns[config.column].orderBy)(
 									config,
 									orderBy,
 									datatableDefinition.columns[config.column]
@@ -331,16 +299,12 @@ const DatatableView = BaseView.extend({
 			errorMessage = 'Data not found.';
 		} else {
 			errorMessage =
-				jqXHR.responseJSON &&
-				jqXHR.responseJSON.error &&
-				jqXHR.responseJSON.error.message
+				jqXHR.responseJSON && jqXHR.responseJSON.error && jqXHR.responseJSON.error.message
 					? jqXHR.responseJSON.error.message
 					: jqXHR.responseText;
 		}
 
-		this.showAlert(
-			`<strong>An error has occured.</strong> Error code: ${errorCode}. Error message: ${errorMessage}`
-		);
+		this.showAlert(`<strong>An error has occured.</strong> Error code: ${errorCode}. Error message: ${errorMessage}`);
 		callback({ data: [], draw, recordsTotal: 0, recordsFiltered: 0 });
 	},
 
@@ -384,15 +348,10 @@ const FilteredDatatableView = DatatableView.extend({
 	initComplete(settings, json) {
 		DatatableView.prototype.initComplete.call(this, settings, json);
 
-		for (
-			let index = 0, length = this.datatable.columns()[0].length;
-			index < length;
-			index++
-		) {
+		for (let index = 0, length = this.datatable.columns()[0].length; index < length; index++) {
 			const field = this.el.querySelector(`[data-column-index="${index}"]`);
 			if (field) {
-				this.el.querySelector(`[data-column-index="${index}"]`).value =
-					this.datatable.column(index).search() || '';
+				this.el.querySelector(`[data-column-index="${index}"]`).value = this.datatable.column(index).search() || '';
 			}
 		}
 	},
@@ -431,9 +390,7 @@ const FilteredDatatableView = DatatableView.extend({
 							.draw();
 					});
 
-					const option0 = select.appendChild(
-						document.createElement('option')
-					);
+					const option0 = select.appendChild(document.createElement('option'));
 					option0.setAttribute('value', '');
 
 					let choices = column.choices;
@@ -465,14 +422,9 @@ const FilteredDatatableView = DatatableView.extend({
 
 							select.removeChild(option0);
 							choices.forEach(choice => {
-								const option = select.appendChild(
-									document.createElement('option')
-								);
+								const option = select.appendChild(document.createElement('option'));
 								option.textContent = choice.text || choice.value;
-								option.setAttribute(
-									'value',
-									choice.value != null ? choice.value : choice.text
-								);
+								option.setAttribute('value', choice.value != null ? choice.value : choice.text);
 							});
 						});
 					promises.push(promise);

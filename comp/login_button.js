@@ -26,9 +26,7 @@ const LoginButtonView = BaseView.extend({
 				if (this.model.isLoggedIn()) {
 					const cotUser = this.model.get('cotUser');
 					const name = cotUser
-						? [cotUser.lastName, cotUser.firstName]
-								.filter(value => value)
-								.join(', ')
+						? [cotUser.lastName, cotUser.firstName].filter(value => value).join(', ')
 						: this.model.get('userID');
 					this.el.innerHTML = `<a href="#${this.completeLogoutFragment()}" class="btn btn-default btn-logout">Logout: <strong>${name}</strong></a>`;
 				} else {

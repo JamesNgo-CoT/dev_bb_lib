@@ -57,7 +57,7 @@ const LoginFormView = FormView.extend({
 							{
 								type: 'html',
 								html:
-									'Need help logging in? Contact <a href="mailto:itservice@toronto.ca">IT Service Desk</a> or all 416-338-2255'
+									'Need help logging in? Contact <a href="mailto:itservice@toronto.ca">IT Service Desk</a> or all 416-338-2255.'
 							}
 						]
 					}

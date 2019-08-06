@@ -707,90 +707,82 @@ const BaseRouter = Backbone.Router.extend({
 });
 
 /* exported BaseModel */
-const BaseModel = Backbone.Model.extend(
-	{
-		url() {
-			if (this.isNew()) {
-				const url = Backbone.Model.prototype.url;
-				return typeof url === 'function' ? url.call(this) : url;
-			}
+const BaseModel = Backbone.Model.extend({
+	url() {
+		if (this.isNew()) {
+			const url = Backbone.Model.prototype.url;
+			return typeof url === 'function' ? url.call(this) : url;
+		}
 
-			const base =
-				_.result(this, 'urlRoot') || _.result(this.collection, 'url');
-			const id = this.get(this.idAttribute);
-			return `${base.replace(/\/$/, '')}('${encodeURIComponent(id)}')`;
-		},
-
-		sync(method, model, options) {
-			return Backbone.Model.prototype.sync
-				.call(this, method, model, options)
-				.then(returnValue => {
-					this.lastSyncData = JSON.stringify(model.toJSON());
-					return returnValue;
-				});
-		},
-
-		hasChanged() {
-			return this.lastSyncData != JSON.stringify(this.toJSON());
-		},
-
-		webStorage: BaseModel.webStorage,
-		webStorageFetch: BaseModel.webStorageFetch,
-		webStorageSave: BaseModel.webStorageSave,
-		webStorageDestroy: BaseModel.webStorageDestroy
+		const base =
+			_.result(this, 'urlRoot') || _.result(this.collection, 'url');
+		const id = this.get(this.idAttribute);
+		return `${base.replace(/\/$/, '')}('${encodeURIComponent(id)}')`;
 	},
-	{
-		webStorage: localStorage,
 
-		webStorageFetch(options) {
-			const webStorage =
-				_.result(options, 'webStorage') ||
-				_.result(this, 'webStorage') ||
-				_.result(BaseModel, 'webStorage');
-			const webStorageKey =
-				_.result(options, 'webStorageKey') ||
-				_.result(this, 'webStorageKey') ||
-				_.result(BaseModel, 'webStorageKey');
+	sync(method, model, options) {
+		return Backbone.Model.prototype.sync
+			.call(this, method, model, options)
+			.then(returnValue => {
+				this.lastSyncData = JSON.stringify(model.toJSON());
+				return returnValue;
+			});
+	},
 
-			if (webStorage && webStorageKey) {
-				this.set(JSON.parse(webStorage.getItem(webStorageKey)), options);
-			}
-		},
+	hasChanged() {
+		return this.lastSyncData != JSON.stringify(this.toJSON());
+	},
 
-		webStorageSave(options) {
-			const webStorage =
-				_.result(options, 'webStorage') ||
-				_.result(this, 'webStorage') ||
-				_.result(BaseModel, 'webStorage');
-			const webStorageKey =
-				_.result(options, 'webStorageKey') ||
-				_.result(this, 'webStorageKey') ||
-				_.result(BaseModel, 'webStorageKey');
+	webStorage: localStorage,
 
-			if (webStorage && webStorageKey) {
-				webStorage.setItem(
-					webStorageKey,
-					JSON.stringify(this.toJSON(options))
-				);
-			}
-		},
+	webStorageFetch(options) {
+		const webStorage =
+			_.result(options, 'webStorage') ||
+			_.result(this, 'webStorage') ||
+			_.result(BaseModel, 'webStorage');
+		const webStorageKey =
+			_.result(options, 'webStorageKey') ||
+			_.result(this, 'webStorageKey') ||
+			_.result(BaseModel, 'webStorageKey');
 
-		webStorageDestroy(options) {
-			const webStorage =
-				_.result(options, 'webStorage') ||
-				_.result(this, 'webStorage') ||
-				_.result(BaseModel, 'webStorage');
-			const webStorageKey =
-				_.result(options, 'webStorageKey') ||
-				_.result(this, 'webStorageKey') ||
-				_.result(BaseModel, 'webStorageKey');
+		if (webStorage && webStorageKey) {
+			this.set(JSON.parse(webStorage.getItem(webStorageKey)), options);
+		}
+	},
 
-			if (webStorage && webStorageKey) {
-				webStorage.removeItem(webStorageKey);
-			}
+	webStorageSave(options) {
+		const webStorage =
+			_.result(options, 'webStorage') ||
+			_.result(this, 'webStorage') ||
+			_.result(BaseModel, 'webStorage');
+		const webStorageKey =
+			_.result(options, 'webStorageKey') ||
+			_.result(this, 'webStorageKey') ||
+			_.result(BaseModel, 'webStorageKey');
+
+		if (webStorage && webStorageKey) {
+			webStorage.setItem(
+				webStorageKey,
+				JSON.stringify(this.toJSON(options))
+			);
+		}
+	},
+
+	webStorageDestroy(options) {
+		const webStorage =
+			_.result(options, 'webStorage') ||
+			_.result(this, 'webStorage') ||
+			_.result(BaseModel, 'webStorage');
+		const webStorageKey =
+			_.result(options, 'webStorageKey') ||
+			_.result(this, 'webStorageKey') ||
+			_.result(BaseModel, 'webStorageKey');
+
+		if (webStorage && webStorageKey) {
+			webStorage.removeItem(webStorageKey);
 		}
 	}
-);
+});
 
 /* exported BaseCollection */
 const BaseCollection = Backbone.Collection.extend({
@@ -825,10 +817,10 @@ const BaseCollection = Backbone.Collection.extend({
 		return this.lastSyncData != JSON.stringify(this.toJSON());
 	},
 
-	webStorage: BaseModel.webStorage,
-	webStorageFetch: BaseModel.webStorageFetch,
-	webStorageSave: BaseModel.webStorageSave,
-	webStorageDestroy: BaseModel.webStorageDestroy
+	webStorage: BaseModel.prototype.webStorage,
+	webStorageFetch: BaseModel.prototype.webStorageFetch,
+	webStorageSave: BaseModel.prototype.webStorageSave,
+	webStorageDestroy: BaseModel.prototype.webStorageDestroy
 });
 
 /* exported BaseView */
@@ -943,6 +935,19 @@ const LoginModel = BaseModel.extend({
 			if (!this.isLoggedIn()) {
 				return false;
 			} else {
+				console.log(
+					'DONT FETCH',
+					!!(options.ignoreLastAuthentication !== true &&
+						this.lastAuthentication &&
+						Math.abs(
+							(new Date().getTime() -
+								this.lastAuthentication.getTime()) /
+								1000 /
+								60 /
+								60
+						) < 5)
+				);
+
 				if (
 					options.ignoreLastAuthentication !== true &&
 					this.lastAuthentication &&
@@ -956,6 +961,7 @@ const LoginModel = BaseModel.extend({
 					return this.isLoggedIn();
 				}
 
+				console.log('FETCH');
 				return this.fetch(options).then(
 					() => {
 						this.lastAuthentication = new Date();

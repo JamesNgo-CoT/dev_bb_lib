@@ -67,31 +67,33 @@ const LoginFormView = FormView.extend({
 		]
 	},
 
-	success() {
-		const button = this.el.querySelector('.btn-login');
-		button.setAttribute('disabled', '');
+	prepareForSubmission() {
+		FormView.prototype.prepareForSubmission.call(this);
 
+		const button = this.el.querySelector('.btn-login');
 		const buttonText = button.querySelectorAll('span')[1];
 		buttonText.textContent = 'Verifying information';
+	},
 
-		this.model
-			.login()
-			.then(
-				() => {
-					this.trigger('success');
-				},
-				() => {
-					this.showAlert(
-						'<strong>Login failed.</strong> Please review your user name and password and try again.',
-						0
-					);
-				}
-			)
-			.then(() => {
-				this.formValidator.resetForm();
+	restoreFromSubmission(isSuccessful) {
+		FormView.prototype.restoreFromSubmission.call(this);
 
-				buttonText.textContent = 'Login';
-				button.removeAttribute('disabled');
-			});
+		const button = this.el.querySelector('.btn-login');
+		const buttonText = button.querySelectorAll('span')[1];
+		buttonText.textContent = 'Login';
+
+		if (isSuccessful === true) {
+			this.showAlert(
+				'<strong>Login successful.</strong> You have successfully logged in.',
+				0,
+				'alert-success'
+			);
+		} else if (isSuccessful === false) {
+			this.showAlert(
+				'<strong>Login failed.</strong> Please review your user name and password and try again.',
+				0,
+				'alert-danger'
+			);
+		}
 	}
 });

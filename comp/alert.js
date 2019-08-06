@@ -11,7 +11,7 @@ const AlertModel = BaseModel.extend({
 const AlertView = BaseView.extend({
 	attributes: { role: 'alert', 'data-view': 'AlertView' },
 
-	className: 'alert-danger',
+	className: 'alert alert-danger alert-dismissible',
 
 	initialize(options) {
 		this.listenTo(options.model, 'change', () => {
@@ -26,30 +26,22 @@ const AlertView = BaseView.extend({
 			this.removeChild(this.el.firstChild);
 		}
 
-		this.el.classList.add('alert', 'alert-dismissible');
+		const closeBtn = this.el.appendChild(document.createElement('button'));
+		closeBtn.setAttribute('type', 'button');
+		closeBtn.setAttribute('data-dismiss', 'alert');
+		closeBtn.setAttribute('aria-label', 'Close');
+		closeBtn.classList.add('close');
 
-		const messageElementButton = this.el.appendChild(
-			document.createElement('button')
-		);
-		messageElementButton.setAttribute('type', 'button');
-		messageElementButton.setAttribute('data-dismiss', 'alert');
-		messageElementButton.setAttribute('aria-label', 'Close');
-		messageElementButton.classList.add('close');
+		const closeBtnSign = closeBtn.appendChild(document.createElement('span'));
+		closeBtnSign.setAttribute('aria-hidden', 'true');
+		closeBtnSign.innerHTML = '&times;';
 
-		const messageElementButtonTimes = messageElementButton.appendChild(
-			document.createElement('span')
-		);
-		messageElementButtonTimes.setAttribute('aria-hidden', 'true');
-		messageElementButtonTimes.innerHTML = '&times;';
-
-		const innerMessageElement = this.el.appendChild(
-			document.createElement('div')
-		);
+		const messageRegion = this.el.appendChild(document.createElement('div'));
 		const message = this.model.get('message');
 		if (typeof message === 'string') {
-			innerMessageElement.innerHTML = message;
+			messageRegion.innerHTML = message;
 		} else {
-			innerMessageElement.appendChild(message);
+			messageRegion.appendChild(message);
 		}
 
 		return BaseView.prototype.render.call(this);

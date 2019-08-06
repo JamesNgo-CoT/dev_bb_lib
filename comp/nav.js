@@ -1,4 +1,4 @@
-/* global _ BaseModel BaseCollection BaseView */
+/* global BaseModel BaseCollection BaseView */
 
 /* exported NavItemModel */
 const NavItemModel = BaseModel.extend({
@@ -21,7 +21,6 @@ const NavItemView = BaseView.extend({
 		this.listenTo(options.model, 'change', () => {
 			this.render();
 		});
-
 		BaseView.prototype.initialize.call(this, options);
 	},
 
@@ -46,31 +45,6 @@ const NavItemView = BaseView.extend({
 	}
 });
 
-/* exported AuthyNavItemView */
-const AuthyNavItemView = NavItemView.extend({
-	initialize(options) {
-		const loginModel = _.result(this, 'loginModel');
-		if (loginModel) {
-			this.listenTo(loginModel, 'change', () => {
-				this.render();
-			});
-		}
-
-		return NavItemView.prototype.initialize.call(this, options);
-	},
-
-	render() {
-		return NavItemView.prototype.render.call(this).then(() => {
-			const loginModel = _.result(this, 'loginModel');
-			if (loginModel && loginModel.isLoggedIn()) {
-				this.el.classList.remove('hide');
-			} else {
-				this.el.classList.add('hide');
-			}
-		});
-	}
-});
-
 /* exported NavCollection */
 const NavCollection = BaseCollection.extend({
 	model: NavItemModel,
@@ -90,15 +64,11 @@ const NavCollection = BaseCollection.extend({
 const NavView = BaseView.extend({
 	attributes: { role: 'navigation', 'data-view': 'NavView' },
 
-	className: 'navview',
-
 	initialize(options) {
 		this.navItems = [];
-
 		this.listenTo(options.collection, 'update', () => {
 			this.render();
 		});
-
 		BaseView.prototype.initialize.call(this, options);
 	},
 
@@ -121,28 +91,13 @@ const NavView = BaseView.extend({
 		const wrapper = this.el.appendChild(document.createElement('ul'));
 		wrapper.classList.add('nav', 'nav-tabs');
 
-		const navItemViewRenderPromises = [];
-		this.collection.each(model => {
-			let navItemView;
-			if (model.get('requiresLogin')) {
-				const AuthyNavItemView = AuthyNavItemView.extend({
-					loginModel: _.result(this, 'loginModel')
-				});
-				navItemView = new AuthyNavItemView({ model });
-			} else {
-				navItemView = new NavItemView({
-					model
-				});
-			}
-
-			if (navItemView) {
-				wrapper.appendChild(navItemView.el);
-				navItemViewRenderPromises.push(navItemView.render());
+		return Promise.all(
+			this.collection.map(model => {
+				const navItemView = new NavItemView({ model });
 				this.navItems.push(navItemView);
-			}
-		});
-
-		return Promise.all(navItemViewRenderPromises).then(() => {
+				return navItemView.appendTo(this.el).render();
+			})
+		).then(() => {
 			return BaseView.prototype.render.call(this);
 		});
 	}

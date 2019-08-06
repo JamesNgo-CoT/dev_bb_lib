@@ -1,4 +1,4 @@
-/* global _ AppEssentials Backbone jQuery */
+/* global _ $ Backbone */
 
 ////////////////////////////////////////////////////////////////////////////////
 // UTILITIES
@@ -7,46 +7,17 @@
 /* exported doAjax */
 function doAjax(options) {
 	return new Promise((resolve, reject) => {
-		jQuery.ajax(options).then(
-			data => {
-				resolve(data);
-			},
-			jqXHR => {
-				const error = {
-					code: jqXHR.status,
-					message: '',
-					resolveWithLogin: false
-				};
-				if (jqXHR.responseJSON && jqXHR.responseJSON.message) {
-					error.message = jqXHR.responseJSON.message;
-				} else {
-					error.message = jqXHR.responseText;
-				}
-
-				// Missing authentication and invalid SID returns a 400 HTTP error code.
-				if (error.code === 400) {
-					const AUTH_IS_MISSING_ERROR =
-						"Header 'Authorization' is missing or in incorrect format, or authentication mechanism other than AuthSession / Basic is specified, or session service is unreachable.";
-					const INVALID_SID_ERROR_PREFIX = 'Session id / Token';
-					const INVALID_SID_ERROR_SUFFIX = 'is invalid.';
-					if (
-						error.message.indexOf(AUTH_IS_MISSING_ERROR) !== -1 ||
-						(error.message.indexOf(INVALID_SID_ERROR_PREFIX) !== -1 &&
-							error.message.indexOf(INVALID_SID_ERROR_SUFFIX) !== -1)
-					) {
-						error.resolveWithLogin = true;
-					}
-				}
-
-				reject(error);
-			}
+		$.ajax(options).then(
+			(data, textStatus, jqXHR) => resolve({ data, textStatus, jqXHR }),
+			(jqXHR, textStatus, errorThrown) =>
+				reject({ jqXHR, textStatus, errorThrown })
 		);
 	});
 }
 
-/* exported escapeODataValue */
-function escapeODataValue(str) {
-	return str
+/* exported escapeOdataValue */
+function escapeOdataValue(value) {
+	return value
 		.replace(/'/g, "''")
 		.replace(/%/g, '%25')
 		.replace(/\+/g, '%2B')
@@ -61,46 +32,32 @@ function escapeODataValue(str) {
 
 /* exported loadScripts */
 function loadScripts(...urls) {
-	const promises = [];
+	return Promise.all(
+		urls.map(url => {
+			if (document.querySelectorAll(`script[src="${url}"]`).length > 0) {
+				return;
+			}
 
-	for (let index = 0, length = urls.length; index < length; index++) {
-		const url = urls[index];
-
-		if (document.querySelectorAll(`script[src="${url}"]`).length > 0) {
-			return;
-		}
-
-		promises.push(
-			new Promise(resolve => {
+			return new Promise((resolve, reject) => {
 				var script = document.createElement('script');
 				script.setAttribute('src', url);
-
+				script.onerror = () => {
+					reject();
+				};
 				script.onload = () => {
 					resolve();
 				};
 				script.onreadystatechange = () => {
 					resolve();
 				};
-
 				document.getElementsByTagName('head')[0].appendChild(script);
-			})
-		);
-	}
-
-	return Promise.all(promises);
+			});
+		})
+	);
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// JQUERY CONFIGURATION
-////////////////////////////////////////////////////////////////////////////////
-
-jQuery.ajaxSetup({
-	dataFilter(data) {
-		return data;
-	}
-});
-
-AppEssentials.Utilities.stringToFunction = str => {
+/* exported stringToFunction */
+function stringToFunction(str) {
 	if (typeof str !== 'string') {
 		return str;
 	}
@@ -112,60 +69,27 @@ AppEssentials.Utilities.stringToFunction = str => {
 	}
 
 	return null;
-};
+}
 
-AppEssentials.Utilities.swapView = (element, oldView, newView) => {
-	element.style.height = getComputedStyle(element).height;
-	element.style.overflow = 'hidden';
-
-	if (oldView) {
-		oldView.remove();
-	}
-
-	return Promise.resolve()
-		.then(() => {
-			if (newView) {
-				return newView.appendTo(element).render();
-			}
-		})
-		.then(() => {
-			element.style.removeProperty('overflow');
-			element.style.removeProperty('height');
-		})
-		.then(() => {
-			return newView;
-		});
-};
-
-AppEssentials.Utilities.toQueryString = queryObject => {
+/* exported toQueryString */
+function toQueryString(queryObject) {
 	if (Array.isArray(queryObject)) {
-		const array = [];
-		for (
-			let index = 0, length = queryObject.length;
-			index < length;
-			index++
-		) {
-			array.push(
-				encodeURIComponent(
-					AppEssentials.Utilities.toQueryString(queryObject[index])
-				)
-			);
-		}
-		return array.join(',');
+		return queryObject
+			.map(val => {
+				return toQueryString(val);
+			})
+			.join(',');
 	}
 
 	if (typeof queryObject === 'object' && queryObject !== null) {
-		const array = [];
-		for (const key in queryObject) {
-			if (Object.prototype.hasOwnProperty.call(queryObject, key)) {
-				array.push(
-					`${key}=${encodeURIComponent(
-						AppEssentials.Utilities.toQueryString(queryObject[key])
-					)}`
-				);
-			}
-		}
-		return array.join('&');
+		return Object.keys(queryObject)
+			.filter(key => {
+				return Object.prototype.hasOwnProperty.call(queryObject, key);
+			})
+			.map(key => {
+				return `${key}=${toQueryString(queryObject[key])}`;
+			})
+			.join('&');
 	}
 
 	let prefix = '';
@@ -188,56 +112,65 @@ AppEssentials.Utilities.toQueryString = queryObject => {
 		default:
 			prefix = 's';
 	}
-	return `${prefix}${String(queryObject)}`;
-};
 
-AppEssentials.Utilities.toQueryObject = queryString => {
+	return encodeURIComponent(`${prefix}${String(queryObject)}`);
+}
+
+/* exported toQueryObject */
+function toQueryObject(queryString) {
 	if (typeof queryString !== 'string') {
 		return queryString;
 	}
 
 	if (queryString.indexOf(',') !== -1) {
-		const array = queryString.split(',');
-		for (let index = 0, length = array.length; index < length; index++) {
-			array[index] = AppEssentials.Utilities.toQueryObject(
-				decodeURIComponent(array[index])
-			);
-		}
-		return array;
+		return queryString.split(',').map(value => {
+			return toQueryObject(value);
+		});
 	}
 
 	if (queryString.indexOf('=') !== -1) {
-		const object = {};
-		const array = queryString.split('&');
-		for (let index = 0, length = array.length; index < length; index++) {
-			const pair = array[index].split('=');
-			object[pair[0]] = AppEssentials.Utilities.toQueryObject(
-				decodeURIComponent(pair[1])
-			);
-		}
-		return object;
+		return queryString.split('&').reduce((acc, curr) => {
+			const [name, value] = curr.split('=');
+			acc[name] = toQueryObject(value);
+			return acc;
+		}, {});
 	}
 
 	const prefix = queryString.charAt(0);
-	const value = queryString.slice(1);
+	let value = decodeURIComponent(queryString.slice(1));
 	switch (prefix) {
 		case 'u':
-			return undefined;
+			value = undefined;
+			break;
 		case 'b':
-			return Boolean(value);
+			value = Boolean(value);
+			break;
 		case 'n':
-			return Number(value);
+			value = Number(value);
+			break;
 		case 'f':
-			return new Function(`return ${value}`)();
+			value = new Function(`return ${value}`)();
+			break;
 		case 'o':
-			return null;
-		default:
-			return value;
+			value = null;
+			break;
 	}
-};
+
+	return value;
+}
 
 ////////////////////////////////////////////////////////////////////////////////
-// CoreJS Overrides
+// JQUERY SETUP
+////////////////////////////////////////////////////////////////////////////////
+
+$.ajaxSetup({
+	dataFilter(data) {
+		return data;
+	}
+});
+
+////////////////////////////////////////////////////////////////////////////////
+// COREJS SETUP
 ////////////////////////////////////////////////////////////////////////////////
 
 if (window.cot_app) {
@@ -247,6 +180,7 @@ if (window.cot_app) {
 			.querySelector('#app-header h1')
 			.appendChild(document.createElement('span'));
 		this.titleElement.setAttribute('tabindex', '-1');
+
 		return originalRender.call(this);
 	};
 
@@ -377,22 +311,25 @@ if (window.CotForm) {
 			return Promise.all(renderPromises);
 		}
 
-		function finalizeRenderer(renderer) {
-			return AppEssentials.Utilities.stringToFunction(renderer);
-		}
-
 		const cotForm = this;
 		const model = cotForm.getModel();
 		const view = cotForm.getView();
 
-		const definition = this._definition;
+		let definition = this._definition;
 
 		return Promise.resolve()
+			.then(() => {
+				if (typeof definition === 'string') {
+					return doAjax({ url: definition }).then(data => {
+						definition = data;
+					});
+				}
+			})
 			.then(() => {
 				return renderLoop({
 					definition,
 					renderSection({ definition, section }) {
-						const renderer = finalizeRenderer(section.preRender);
+						const renderer = stringToFunction(section.preRender);
 						if (renderer) {
 							return renderer.call(this, {
 								cotForm,
@@ -404,7 +341,7 @@ if (window.CotForm) {
 						}
 					},
 					renderRow({ definition, section, row }) {
-						const renderer = finalizeRenderer(row.preRender);
+						const renderer = stringToFunction(row.preRender);
 						if (renderer) {
 							return renderer.call(this, {
 								cotForm,
@@ -443,7 +380,7 @@ if (window.CotForm) {
 									}
 
 									if (typeof field.choices === 'string') {
-										return AppEssentials.Utilities.doAjax({
+										return doAjax({
 											url: field.choices
 										}).then(data => {
 											field.choices = data;
@@ -453,7 +390,7 @@ if (window.CotForm) {
 							})
 							.then(() => {
 								if (field.choicesMap) {
-									field.choicesMap = AppEssentials.Utilities.stringToFunction(
+									field.choicesMap = stringToFunction(
 										field.choicesMap
 									);
 									field.choices = field.choicesMap(field.choices);
@@ -493,7 +430,7 @@ if (window.CotForm) {
 									}
 								}
 
-								const renderer = finalizeRenderer(field.preRender);
+								const renderer = stringToFunction(field.preRender);
 								if (renderer) {
 									return renderer.call(this, {
 										cotForm,
@@ -519,7 +456,7 @@ if (window.CotForm) {
 				return renderLoop({
 					definition,
 					renderSection({ definition, section }) {
-						const renderer = finalizeRenderer(section.postRender);
+						const renderer = stringToFunction(section.postRender);
 						if (renderer) {
 							return renderer.call(this, {
 								cotForm,
@@ -531,7 +468,7 @@ if (window.CotForm) {
 						}
 					},
 					renderRow({ definition, section, row }) {
-						const renderer = finalizeRenderer(row.postRender);
+						const renderer = stringToFunction(row.postRender);
 						if (renderer) {
 							return renderer.call(this, {
 								cotForm,
@@ -552,7 +489,7 @@ if (window.CotForm) {
 						repeatControl,
 						repeatControlRow
 					}) {
-						const renderer = finalizeRenderer(field.postRender);
+						const renderer = stringToFunction(field.postRender);
 						if (renderer) {
 							return renderer.call(this, {
 								cotForm,
@@ -626,76 +563,70 @@ if (window.CotForm) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// Backbone Setup
+// BACKBONE SETUP
 ////////////////////////////////////////////////////////////////////////////////
-
-Backbone.ajax = AppEssentials.Utilities.doAjax;
 
 const originalBackboneSync = Backbone.sync;
 Backbone.sync = function(method, model, options = {}) {
-	options.headers = options.headers || {};
-	options.headers.Accept =
-		options.headers.Accept || 'application/json; charset=utf-8';
+	return new Promise((resolve, reject) => {
+		options.headers = options.headers || {};
+		options.headers.Accept =
+			options.headers.Accept || 'application/json; charset=utf-8';
 
-	if (!options.headers.Authorization) {
-		const loginModel =
-			_.result(model, 'loginModel') ||
-			AppEssentials.Backbone.LoginModel.instance;
-		if (loginModel && loginModel !== model && !loginModel.isNew()) {
-			options.headers.Authorization = `AuthSession ${loginModel.get(
-				loginModel.idAttribute
-			)}`;
-		}
-	}
-
-	if (method === 'create' || method === 'update' || method === 'patch') {
-		options.contentType =
-			options.contentType || 'application/json; charset=utf-8';
-
-		if (!options.data) {
-			let json = options.attrs || model.toJSON(options);
-
-			delete json['@odata.context'];
-			delete json['@odata.etag'];
-			delete json['__CreatedOn'];
-			delete json['__ModifiedOn'];
-			delete json['__Owner'];
-
-			const adjustSyncJson = options.adjustSyncJson || model.adjustSyncJson;
-			if (adjustSyncJson) {
-				json = adjustSyncJson(json);
+		if (!options.headers.Authorization) {
+			const loginModel =
+				_.result(model, 'loginModel') || LoginModel.instance;
+			if (loginModel && loginModel !== model && !loginModel.isNew()) {
+				options.headers.Authorization = `AuthSession ${loginModel.get(
+					loginModel.idAttribute
+				)}`;
 			}
-
-			options.data = JSON.stringify(json);
 		}
-	}
 
-	return originalBackboneSync.call(this, method, model, options);
+		if (method === 'create' || method === 'update' || method === 'patch') {
+			options.contentType =
+				options.contentType || 'application/json; charset=utf-8';
+
+			if (!options.data) {
+				let json = options.attrs || model.toJSON(options);
+
+				delete json['@odata.context'];
+				delete json['@odata.etag'];
+				delete json['__CreatedOn'];
+				delete json['__ModifiedOn'];
+				delete json['__Owner'];
+
+				const adjustSyncJson =
+					options.adjustSyncJson || model.adjustSyncJson;
+				if (adjustSyncJson) {
+					json = adjustSyncJson(json);
+				}
+
+				options.data = JSON.stringify(json);
+			}
+		}
+
+		originalBackboneSync.call(this, method, model, options).then(
+			(data, textStatus, jqXHR) => {
+				resolve({ data, textStatus, jqXHR });
+			},
+			(jqXHR, textStatus, errorThrown) => {
+				reject({ jqXHR, textStatus, errorThrown });
+			}
+		);
+	});
 };
 
 ////////////////////////////////////////////////////////////////////////////////
-// Backbone Namespace
+// BACKBONE CLASSES
 ////////////////////////////////////////////////////////////////////////////////
 
-AppEssentials.Backbone = AppEssentials.Backbone || {};
-AppEssentials.BB = AppEssentials.Backbone;
-
-AppEssentials.Backbone.restartRouter = () => {
-	if (Backbone.History.started) {
-		Backbone.history.stop();
-	}
-	Backbone.history.start();
-};
-
-AppEssentials.Backbone.Router = Backbone.Router.extend({
-	// Overridden Property
-
+/* exported BaseRouter */
+const BaseRouter = Backbone.Router.extend({
 	routes: {
 		['home']() {},
 		'*default': 'routeDefault'
 	},
-
-	// New Properties
 
 	defaultFragment: 'home',
 
@@ -707,38 +638,6 @@ AppEssentials.Backbone.Router = Backbone.Router.extend({
 			if (typeof defaultFragment === 'string') {
 				this.navigate(defaultFragment, { trigger: true });
 			}
-		}
-	},
-
-	// Overridden Methods
-
-	execute(callback, args, name) {
-		let cleanupFunctionReturnValue;
-
-		if (typeof this.cleanupFunction === 'function') {
-			cleanupFunctionReturnValue = this.cleanupFunction.call(this, name);
-			if (cleanupFunctionReturnValue !== false) {
-				this.cleanupFunction = null;
-			}
-		}
-
-		if (
-			cleanupFunctionReturnValue !== false &&
-			typeof callback === 'function'
-		) {
-			Promise.resolve()
-				.then(() => {
-					return callback.call(this, ...args);
-				})
-				.then(cleanupFunction => {
-					if (typeof cleanupFunction === 'function') {
-						this.cleanupFunction = cleanupFunction;
-					}
-				});
-		}
-
-		if (cleanupFunctionReturnValue === false) {
-			this.routeDefault();
 		}
 	},
 
@@ -774,100 +673,128 @@ AppEssentials.Backbone.Router = Backbone.Router.extend({
 		}
 
 		return Backbone.Router.prototype.route.call(this, route, name, callback);
-	}
-});
+	},
 
-AppEssentials.Backbone.Model = Backbone.Model.extend({
-	// Overriden Property
+	execute(callback, args, name) {
+		let cleanupFunctionReturnValue;
 
-	url() {
-		if (this.isNew()) {
-			const url = Backbone.Model.prototype.url;
-			return typeof url === 'function' ? url.call(this) : url;
+		if (typeof this.cleanupFunction === 'function') {
+			cleanupFunctionReturnValue = this.cleanupFunction.call(this, name);
+			if (cleanupFunctionReturnValue !== false) {
+				this.cleanupFunction = null;
+			}
 		}
 
-		const base =
-			_.result(this, 'urlRoot') || _.result(this.collection, 'url');
-		const id = this.get(this.idAttribute);
-		return `${base.replace(/\/$/, '')}('${encodeURIComponent(id)}')`;
-	},
-
-	// New Properties
-
-	loginModel: null,
-
-	webStorage: localStorage,
-
-	webStorageKey: null,
-
-	// Overriden Method
-
-	sync(method, model, options) {
-		return Backbone.Model.prototype.sync
-			.call(this, method, model, options)
-			.then(returnValue => {
-				this.lastSyncData = JSON.stringify(model.toJSON());
-				return returnValue;
-			});
-	},
-
-	// New Methods
-
-	hasChanged() {
-		return this.lastSyncData != JSON.stringify(this.toJSON());
-	},
-
-	webStorageFetch(options) {
-		const webStorage =
-			_.result(options, 'webStorage') || _.result(this, 'webStorage');
-		const webStorageKey =
-			_.result(options, 'webStorageKey') || _.result(this, 'webStorageKey');
-
-		if (webStorage && webStorageKey) {
-			this.set(JSON.parse(webStorage.getItem(webStorageKey)), options);
+		if (
+			cleanupFunctionReturnValue !== false &&
+			typeof callback === 'function'
+		) {
+			Promise.resolve()
+				.then(() => {
+					return callback.call(this, ...args);
+				})
+				.then(cleanupFunction => {
+					if (typeof cleanupFunction === 'function') {
+						this.cleanupFunction = cleanupFunction;
+					}
+				});
 		}
-	},
 
-	webStorageSave(options) {
-		const webStorage =
-			_.result(options, 'webStorage') || _.result(this, 'webStorage');
-		const webStorageKey =
-			_.result(options, 'webStorageKey') || _.result(this, 'webStorageKey');
-
-		if (webStorage && webStorageKey) {
-			webStorage.setItem(
-				webStorageKey,
-				JSON.stringify(this.toJSON(options))
-			);
-		}
-	},
-
-	webStorageDestroy(options) {
-		const webStorage =
-			_.result(options, 'webStorage') || _.result(this, 'webStorage');
-		const webStorageKey =
-			_.result(options, 'webStorageKey') || _.result(this, 'webStorageKey');
-
-		if (webStorage && webStorageKey) {
-			webStorage.removeItem(webStorageKey);
+		if (cleanupFunctionReturnValue === false) {
+			this.routeDefault();
 		}
 	}
 });
 
-AppEssentials.Backbone.Collection = Backbone.Collection.extend({
-	// Overriden Property
+/* exported BaseModel */
+const BaseModel = Backbone.Model.extend(
+	{
+		url() {
+			if (this.isNew()) {
+				const url = Backbone.Model.prototype.url;
+				return typeof url === 'function' ? url.call(this) : url;
+			}
 
-	model: AppEssentials.Backbone.Model,
+			const base =
+				_.result(this, 'urlRoot') || _.result(this.collection, 'url');
+			const id = this.get(this.idAttribute);
+			return `${base.replace(/\/$/, '')}('${encodeURIComponent(id)}')`;
+		},
 
-	// New Properties
+		sync(method, model, options) {
+			return Backbone.Model.prototype.sync
+				.call(this, method, model, options)
+				.then(returnValue => {
+					this.lastSyncData = JSON.stringify(model.toJSON());
+					return returnValue;
+				});
+		},
 
-	loginModel: null,
+		hasChanged() {
+			return this.lastSyncData != JSON.stringify(this.toJSON());
+		},
 
-	webStorage: localStorage,
+		webStorage: BaseModel.webStorage,
+		webStorageFetch: BaseModel.webStorageFetch,
+		webStorageSave: BaseModel.webStorageSave,
+		webStorageDestroy: BaseModel.webStorageDestroy
+	},
+	{
+		webStorage: localStorage,
 
-	webStorageKey: null,
+		webStorageFetch(options) {
+			const webStorage =
+				_.result(options, 'webStorage') ||
+				_.result(this, 'webStorage') ||
+				_.result(BaseModel, 'webStorage');
+			const webStorageKey =
+				_.result(options, 'webStorageKey') ||
+				_.result(this, 'webStorageKey') ||
+				_.result(BaseModel, 'webStorageKey');
 
-	// Overriden Methods
+			if (webStorage && webStorageKey) {
+				this.set(JSON.parse(webStorage.getItem(webStorageKey)), options);
+			}
+		},
+
+		webStorageSave(options) {
+			const webStorage =
+				_.result(options, 'webStorage') ||
+				_.result(this, 'webStorage') ||
+				_.result(BaseModel, 'webStorage');
+			const webStorageKey =
+				_.result(options, 'webStorageKey') ||
+				_.result(this, 'webStorageKey') ||
+				_.result(BaseModel, 'webStorageKey');
+
+			if (webStorage && webStorageKey) {
+				webStorage.setItem(
+					webStorageKey,
+					JSON.stringify(this.toJSON(options))
+				);
+			}
+		},
+
+		webStorageDestroy(options) {
+			const webStorage =
+				_.result(options, 'webStorage') ||
+				_.result(this, 'webStorage') ||
+				_.result(BaseModel, 'webStorage');
+			const webStorageKey =
+				_.result(options, 'webStorageKey') ||
+				_.result(this, 'webStorageKey') ||
+				_.result(BaseModel, 'webStorageKey');
+
+			if (webStorage && webStorageKey) {
+				webStorage.removeItem(webStorageKey);
+			}
+		}
+	}
+);
+
+/* exported BaseCollection */
+const BaseCollection = Backbone.Collection.extend({
+	model: BaseModel,
 
 	fetch(options) {
 		if (options && options.query) {
@@ -886,7 +813,7 @@ AppEssentials.Backbone.Collection = Backbone.Collection.extend({
 	},
 
 	sync(method, model, options) {
-		return Backbone.Model.prototype.sync
+		return Backbone.Collection.prototype.sync
 			.call(this, method, model, options)
 			.then(returnValue => {
 				this.lastSyncData = JSON.stringify(model.toJSON());
@@ -894,56 +821,18 @@ AppEssentials.Backbone.Collection = Backbone.Collection.extend({
 			});
 	},
 
-	// New Methods
-
 	hasChanged() {
 		return this.lastSyncData != JSON.stringify(this.toJSON());
 	},
 
-	webStorageFetch(options) {
-		const webStorage =
-			_.result(options, 'webStorage') || _.result(this, 'webStorage');
-		const webStorageKey =
-			_.result(options, 'webStorageKey') || _.result(this, 'webStorageKey');
-
-		if (webStorage && webStorageKey) {
-			this.set(JSON.parse(webStorage.getItem(webStorageKey)), options);
-		}
-	},
-
-	webStorageSave(options) {
-		const webStorage =
-			_.result(options, 'webStorage') || _.result(this, 'webStorage');
-		const webStorageKey =
-			_.result(options, 'webStorageKey') || _.result(this, 'webStorageKey');
-
-		if (webStorage && webStorageKey) {
-			webStorage.setItem(
-				webStorageKey,
-				JSON.stringify(this.toJSON(options))
-			);
-		}
-	},
-
-	webStorageDestroy(options) {
-		const webStorage =
-			_.result(options, 'webStorage') || _.result(this, 'webStorage');
-		const webStorageKey =
-			_.result(options, 'webStorageKey') || _.result(this, 'webStorageKey');
-
-		if (webStorage && webStorageKey) {
-			webStorage.removeItem(webStorageKey);
-		}
-	}
+	webStorage: BaseModel.webStorage,
+	webStorageFetch: BaseModel.webStorageFetch,
+	webStorageSave: BaseModel.webStorageSave,
+	webStorageDestroy: BaseModel.webStorageDestroy
 });
 
-AppEssentials.Backbone.View = Backbone.View.extend({
-	// New Property
-
-	loginModel: null,
-
-	// Overriden Methods
-
+/* exported BaseView */
+const BaseView = Backbone.View.extend({
 	render() {
 		let linkButton = this.el.querySelector('a.btn:not([role="button"])');
 		while (linkButton) {
@@ -960,150 +849,129 @@ AppEssentials.Backbone.View = Backbone.View.extend({
 		return Promise.resolve();
 	},
 
-	// New Method
-
 	appendTo(el) {
 		el.appendChild(this.el);
 		return this;
 	},
 
 	swapWith(nextView) {
-		return AppEssentials.Utilities.swapView(
-			this.el.parentNode,
-			this,
-			nextView
-		);
+		const element = this.el.parentNode;
+
+		element.style.height = getComputedStyle(this.el).height;
+		element.style.overflow = 'hidden';
+
+		this.remove();
+
+		return Promise.resolve()
+			.then(() => {
+				return nextView.appendTo(element).render();
+			})
+			.then(() => {
+				element.style.removeProperty('overflow');
+				element.style.removeProperty('height');
+				return nextView;
+			});
 	}
 });
 
-AppEssentials.Backbone.LoginModel = AppEssentials.Backbone.Model.extend(
-	{
-		// Overriden Properties
+/* exported LoginModel */
+const LoginModel = BaseModel.extend({
+	app: 'cotapp',
 
-		idAttribute: 'sid',
+	idAttribute: 'sid',
 
-		webStorageKey: 'Auth',
+	webStorageKey: 'Auth',
 
-		// New Property
-
-		app: 'cotapp',
-
-		// Overriden Methods
-
-		destroy(options = {}) {
-			options.headers = options.headers || {};
-			options.headers.Authorization = this.get('userID');
-			return AppEssentials.Backbone.Model.prototype.destroy
-				.call(this, options)
-				.finally(() => this.clear());
-		},
-
-		fetch(options) {
-			this.lastFetched = new Date();
-			return AppEssentials.Backbone.Model.prototype.fetch.call(
-				this,
-				options
-			);
-		},
-
-		initialize(attributes, options) {
-			this.on(`change:${this.idAttribute}`, () => {
-				if (!this.isNew()) {
-					this.webStorageSave();
-				} else {
-					this.webStorageDestroy();
-				}
-			});
-
-			this.webStorageFetch();
-
+	initialize(attributes, options) {
+		this.on(`change:${this.idAttribute}`, () => {
 			if (!this.isNew()) {
-				this.fetch().catch(() => {
-					this.clear();
-				});
+				this.webStorageSave();
+			} else {
+				this.webStorageDestroy();
 			}
+		});
 
-			AppEssentials.Backbone.Model.prototype.initialize.call(
-				this,
-				attributes,
-				options
-			);
-		},
+		this.webStorageFetch();
 
-		parse(response, options) {
-			delete response.pwd;
-			return AppEssentials.Backbone.Model.prototype.parse.call(
-				this,
-				response,
-				options
-			);
-		},
+		if (!this.isNew()) {
+			this.fetch().catch(() => {
+				this.clear();
+			});
+		}
 
-		save(attributes = {}, options = {}) {
-			const {
-				app = _.result(this, 'app'),
-				user = this.get('user'),
-				pwd = this.get('pwd')
-			} = attributes;
+		BaseModel.prototype.initialize.call(this, attributes, options);
+	},
 
-			return AppEssentials.Backbone.Model.prototype.save.call(
-				this,
-				{ app, user, pwd },
-				options
-			);
-		},
+	save(attributes = {}, options = {}) {
+		const {
+			app = _.result(this, 'app'),
+			user = this.get('user'),
+			pwd = this.get('pwd')
+		} = attributes;
 
-		// New Methods
+		return BaseModel.prototype.save.call(this, { app, user, pwd }, options);
+	},
 
-		authentication(options = {}) {
-			return Promise.resolve().then(() => {
-				if (!this.isLoggedIn()) {
-					return false;
-				} else {
-					if (
-						options.ignoreLastFetched !== true &&
-						this.lastFetched &&
-						Math.abs(new Date().getTime() - this.lastFetched.getTime()) /
+	parse(response, options) {
+		delete response.pwd;
+		this.clear({ silent: true });
+		return BaseModel.prototype.parse.call(this, response, options);
+	},
+
+	destroy(options = {}) {
+		options.headers = options.headers || {};
+		options.headers.Authorization = this.get('userID');
+		return BaseModel.prototype.destroy
+			.call(this, options)
+			.then(() => this.clear(), () => this.clear());
+	},
+
+	isLoggedIn() {
+		return !this.isNew();
+	},
+
+	login(options) {
+		return this.save(options);
+	},
+
+	logout() {
+		return this.destroy();
+	},
+
+	authentication(options = {}) {
+		return Promise.resolve().then(() => {
+			if (!this.isLoggedIn()) {
+				return false;
+			} else {
+				if (
+					options.ignoreLastAuthentication !== true &&
+					this.lastAuthentication &&
+					Math.abs(
+						(new Date().getTime() - this.lastAuthentication.getTime()) /
 							1000 /
 							60 /
-							60 <
-							20
-					) {
-						return this.isLoggedIn();
-					}
-
-					return this.fetch(options).then(
-						() => {
-							return this.isLoggedIn();
-						},
-						() => {
-							return this.isLoggedIn();
-						}
-					);
+							60
+					) < 5
+				) {
+					return this.isLoggedIn();
 				}
-			});
-		},
 
-		isLoggedIn() {
-			return !this.isNew();
-		},
-
-		login(options) {
-			return this.save(options);
-		},
-
-		logout() {
-			return this.destroy();
-		}
+				return this.fetch(options).then(
+					() => {
+						this.lastAuthentication = new Date();
+						return this.isLoggedIn();
+					},
+					() => {
+						this.clear();
+						this.isLoggedIn();
+					}
+				);
+			}
+		});
 	},
-	{
-		instance: null
+
+	webStorageSave(options) {
+		this.unset('pwd', { silent: true });
+		return BaseModel.prototype.webStorageSave.call(this, options);
 	}
-);
-
-////////////////////////////////////////////////////////////////////////////////
-// Backbone Components Namespace
-////////////////////////////////////////////////////////////////////////////////
-
-AppEssentials.Backbone.Components = AppEssentials.Backbone.Components || {};
-AppEssentials.Backbone.Comp = AppEssentials.Backbone.Components;
+});

@@ -5,9 +5,19 @@ const FormView = BaseView.extend(
 	{
 		attributes: { 'data-view': 'FormView' },
 
-		// Overriden Method
+		removeCotForm() {
+			this.cotForm = null;
+			this.form = null;
+			this.formValidator = null;
+		},
+
+		remove() {
+			this.removeCotForm();
+			BaseView.prototype.remove.call(this);
+		},
 
 		render() {
+			this.removeCotForm();
 			while (this.el.firstChild) {
 				this.removeChild(this.el.firstChild);
 			}
@@ -71,8 +81,6 @@ const FormView = BaseView.extend(
 				});
 		},
 
-		// New Methods
-
 		showAlert(message, sectionIndex, className = 'alert-danger') {
 			let parentNode = this.form;
 
@@ -83,7 +91,7 @@ const FormView = BaseView.extend(
 			}
 
 			const alertView = new AlertView({
-				className,
+				className: `alert ${className} alert-dismissible`,
 				model: new AlertModel({
 					message
 				})
@@ -94,18 +102,7 @@ const FormView = BaseView.extend(
 		},
 
 		success() {
-			if (this.model) {
-				this.model.save().then(
-					() => {
-						this.trigger('success');
-					},
-					() => {
-						this.trigger('failed');
-					}
-				);
-			} else {
-				this.trigger('success');
-			}
+			this.trigger('success');
 		}
 	},
 	{

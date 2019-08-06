@@ -98,11 +98,61 @@ const FormView = BaseView.extend(
 			});
 
 			parentNode.insertBefore(alertView.el, parentNode.firstChild);
-			alertView.render();
+
+			return alertView.render();
 		},
 
 		success() {
-			this.trigger('success');
+			this.prepareForSubmission();
+
+			this.model.save().then(() => {
+				this.showAlert(
+					'<strong>Submission successful.</strong> You have successfully submitted the form.',
+					0,
+					'alert-success'
+				);
+				this.restoreFromSubmission();
+				this.trigger('success');
+			}, () => {
+				this.showAlert(
+					'<strong>Submission failed.</strong> An error occured while submitting the form.',
+					0,
+					'alert-danger'
+				);
+				this.restoreFromSubmission();
+				this.trigger('failed');
+			});
+
+		},
+
+		disabledControls: null,
+
+		prepareForSubmission() {
+			if (!this.disabledControls) {
+				this.disabledControls = [];
+			}
+
+			let disabledControl = this.el.querySelector(
+				'.cot-form .form-control:not([disabled]), .cot-form .form-group button:not([disabled])'
+			);
+			while (disabledControl) {
+				this.disabledControls.push(disabledControl);
+				disabledControl.setAttribute('disabled', '');
+				disabledControl = this.el.querySelector(
+					'.cot-form .form-control:not([disabled]), .cot-form .form-group button:not([disabled])'
+				);
+			}
+		},
+
+		restoreFromSubmission() {
+			if (this.disabledControls) {
+				this.disabledControls.forEach(disabledControl => {
+					disabledControl.removeAttribute('disabled');
+				});
+				this.disabledControls = null;
+			}
+
+			this.formValidator.resetForm();
 		}
 	},
 	{

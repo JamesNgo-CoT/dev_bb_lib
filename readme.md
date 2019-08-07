@@ -9,14 +9,14 @@ git submodule add https://github.com/JamesNgo-CoT/dev_bb_lib.git lib
 ## NPM
 
 ``` shell
-npm install datatables.net datatables.net-bs datatables.net-buttons datatables.net-buttons-bs jszip pdfmake
+npm install CityofToronto/fepe_datatables.git datatables.net-buttons datatables.net-buttons-bs jszip pdfmake
 ```
 
 ## HTML
 
 ``` HTML
 <!-- Datatable -->
-<link rel="stylesheet" href="/node_modules/datatables.net-bs/css/dataTables.bootstrap.css">
+<link rel="stylesheet" href="/node_modules/datatables/src/lib/datatables.min.css">
 <link rel="stylesheet" href="/node_modules/datatables.net-buttons-bs/css/buttons.bootstrap.css">
 
 ...
@@ -25,8 +25,7 @@ npm install datatables.net datatables.net-bs datatables.net-buttons datatables.n
 <script src="/node_modules/jszip/dist/jszip.js"></script>
 <script src="/node_modules/pdfmake/build/pdfmake.js"></script>
 <script src="/node_modules/pdfmake/build/vfs_fonts.js"></script>
-<script src="/node_modules/datatables.net/js/jquery.dataTables.js"></script>
-<script src="/node_modules/datatables.net-bs/js/dataTables.bootstrap.js"></script>
+<script src="/node_modules/datatables/src/lib/datatables.min.js"></script>
 <script src="/node_modules/datatables.net-buttons/js/dataTables.buttons.js"></script>
 <script src="/node_modules/datatables.net-buttons/js/buttons.html5.js"></script>
 <script src="/node_modules/datatables.net-buttons/js/buttons.print.js"></script>

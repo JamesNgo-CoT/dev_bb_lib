@@ -53,7 +53,7 @@ const DatatableView = BaseView.extend({
 				data: 'id',
 				orderable: false,
 				render(data) {
-					return '<a href=#apps/' + data + ' class=btn btn-default>View</a>';
+					return '<a href="#apps/' + data + '" class="btn btn-default">View</a>';
 				},
 				searchable: false,
 				width: '57px'
@@ -141,10 +141,23 @@ const DatatableView = BaseView.extend({
 
 				// Build table.
 				return this.buildTable().then(table => {
+					if (!window.counter) {
+						window.counter = 0;
+					}
+					console.log('COUNTER', window.counter++);
+
 					this.el.appendChild(table);
 
 					// Create Datatable.
-					this.datatable = $(table).DataTable(tempDatatableDefinition);
+					// this.datatable = $(table).DataTable(tempDatatableDefinition);
+					console.log(JSON.stringify(tempDatatableDefinition));
+					this.datatable = $(table).DataTable({
+						columns: tempDatatableDefinition.columns,
+						ajax: tempDatatableDefinition.ajax,
+						serverSide: tempDatatableDefinition.serverSide,
+						dom: tempDatatableDefinition.dom,
+						orderCellsTop: tempDatatableDefinition.orderCellsTop
+					});
 
 					// Run super.render(), returns a Promise.
 					return BaseView.prototype.render.call(this);
@@ -311,9 +324,19 @@ const DatatableView = BaseView.extend({
 	initComplete() {},
 
 	buildTable() {
+		console.log('BUILD TABLE');
+
 		const newTable = document.createElement('table');
 		newTable.classList.add('table', 'table-bordered', 'table-striped');
 		newTable.style.width = '100%';
+
+		const thead = newTable.appendChild(document.createElement('thead'));
+
+		const tr = thead.appendChild(document.createElement('tr'));
+		this.datatableDefinition.columns.forEach((column) => {
+			const th = tr.appendChild(document.createElement('th'));
+			th.textContent = column.title
+		});
 
 		return Promise.resolve(newTable);
 	},
@@ -357,19 +380,16 @@ const FilteredDatatableView = DatatableView.extend({
 	},
 
 	buildTable() {
+		console.log('BUILD TABLE');
+
 		return DatatableView.prototype.buildTable.call(this).then(newTable => {
-			const thead = newTable.appendChild(document.createElement('thead'));
+			const thead = newTable.querySelector('thead');
 
-			const tr1 = thead.appendChild(document.createElement('tr'));
-			this.datatableDefinition.columns.forEach(() => {
-				tr1.appendChild(document.createElement('th'));
-			});
-
-			const tr2 = thead.appendChild(document.createElement('tr'));
+			const tr = thead.appendChild(document.createElement('tr'));
 
 			const promises = [];
 			this.datatableDefinition.columns.forEach((column, index) => {
-				const th = tr2.appendChild(document.createElement('th'));
+				const th = tr.appendChild(document.createElement('th'));
 
 				if (column.searchable === false) {
 					return;
@@ -447,6 +467,7 @@ const FilteredDatatableView = DatatableView.extend({
 			});
 
 			return Promise.all(promises).then(() => {
+				console.log('NEW TABLE', newTable.innerHTML);
 				return newTable;
 			});
 		});

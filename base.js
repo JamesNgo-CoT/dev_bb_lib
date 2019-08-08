@@ -782,15 +782,6 @@ const LoginModel = BaseModel.extend({
 			if (!this.isLoggedIn()) {
 				return false;
 			} else {
-				console.log(
-					'DONT FETCH',
-					!!(
-						options.ignoreLastAuthentication !== true &&
-						this.lastAuthentication &&
-						Math.abs((new Date().getTime() - this.lastAuthentication.getTime()) / 1000 / 60 / 60) < 5
-					)
-				);
-
 				if (
 					options.ignoreLastAuthentication !== true &&
 					this.lastAuthentication &&
@@ -799,7 +790,6 @@ const LoginModel = BaseModel.extend({
 					return this.isLoggedIn();
 				}
 
-				console.log('FETCH');
 				return this.fetch(options).then(
 					() => {
 						this.lastAuthentication = new Date();

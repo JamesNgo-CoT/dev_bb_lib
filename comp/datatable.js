@@ -141,23 +141,10 @@ const DatatableView = BaseView.extend({
 
 				// Build table.
 				return this.buildTable().then(table => {
-					if (!window.counter) {
-						window.counter = 0;
-					}
-					console.log('COUNTER', window.counter++);
-
 					this.el.appendChild(table);
 
 					// Create Datatable.
-					// this.datatable = $(table).DataTable(tempDatatableDefinition);
-					console.log(JSON.stringify(tempDatatableDefinition));
-					this.datatable = $(table).DataTable({
-						columns: tempDatatableDefinition.columns,
-						ajax: tempDatatableDefinition.ajax,
-						serverSide: tempDatatableDefinition.serverSide,
-						dom: tempDatatableDefinition.dom,
-						orderCellsTop: tempDatatableDefinition.orderCellsTop
-					});
+					this.datatable = $(table).DataTable(tempDatatableDefinition);
 
 					// Run super.render(), returns a Promise.
 					return BaseView.prototype.render.call(this);
@@ -324,8 +311,6 @@ const DatatableView = BaseView.extend({
 	initComplete() {},
 
 	buildTable() {
-		console.log('BUILD TABLE');
-
 		const newTable = document.createElement('table');
 		newTable.classList.add('table', 'table-bordered', 'table-striped');
 		newTable.style.width = '100%';
@@ -380,8 +365,6 @@ const FilteredDatatableView = DatatableView.extend({
 	},
 
 	buildTable() {
-		console.log('BUILD TABLE');
-
 		return DatatableView.prototype.buildTable.call(this).then(newTable => {
 			const thead = newTable.querySelector('thead');
 
@@ -467,7 +450,6 @@ const FilteredDatatableView = DatatableView.extend({
 			});
 
 			return Promise.all(promises).then(() => {
-				console.log('NEW TABLE', newTable.innerHTML);
 				return newTable;
 			});
 		});

@@ -14,8 +14,8 @@ function doAjax(options) {
 	});
 }
 
-/* exported escapeOdataValue */
-function escapeOdataValue(value) {
+/* exported escapeODataValue */
+function escapeODataValue(value) {
 	return value
 		.replace(/'/g, "''")
 		.replace(/%/g, '%25')

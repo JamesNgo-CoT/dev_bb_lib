@@ -329,6 +329,22 @@ if (window.CotForm) {
 								}
 							})
 							.then(() => {
+								const renderer = stringToFunction(field.preRender);
+								if (renderer) {
+									return renderer.call(this, {
+										cotForm,
+										model,
+										view,
+										definition,
+										section,
+										row,
+										field,
+										grid,
+										repeatControl,
+										repeatControlRow
+									});
+								}
+
 								if (field.choicesMap) {
 									field.choicesMap = stringToFunction(field.choicesMap);
 									field.choices = field.choicesMap(field.choices);
@@ -357,22 +373,6 @@ if (window.CotForm) {
 											field.choices.unshift({ text: value, value });
 										}
 									}
-								}
-
-								const renderer = stringToFunction(field.preRender);
-								if (renderer) {
-									return renderer.call(this, {
-										cotForm,
-										model,
-										view,
-										definition,
-										section,
-										row,
-										field,
-										grid,
-										repeatControl,
-										repeatControlRow
-									});
 								}
 							});
 					}

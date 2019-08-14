@@ -1,5 +1,9 @@
 %FormView {
 	.cot-form {
+		[data-view="AlertView"] {
+			margin-bottom: 1rem;
+		}
+
 		.form-group {
 			margin-bottom: 1rem;
 

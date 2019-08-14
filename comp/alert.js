@@ -23,7 +23,7 @@ const AlertView = BaseView.extend({
 
 	render() {
 		while (this.el.firstChild) {
-			this.removeChild(this.el.firstChild);
+			this.el.removeChild(this.el.firstChild);
 		}
 
 		const closeBtn = this.el.appendChild(document.createElement('button'));

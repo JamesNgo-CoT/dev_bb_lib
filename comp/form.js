@@ -19,7 +19,7 @@ const FormView = BaseView.extend(
 		render() {
 			this.removeCotForm();
 			while (this.el.firstChild) {
-				this.removeChild(this.el.firstChild);
+				this.el.removeChild(this.el.firstChild);
 			}
 
 			let formDefinition = _.result(this, 'formDefinition');
@@ -100,7 +100,7 @@ const FormView = BaseView.extend(
 				() => {
 					this.showAlert(
 						'<strong>Submission successful.</strong> You have successfully submitted the form.',
-						0,
+						null,
 						'alert-success'
 					);
 					this.restoreFromSubmission();
@@ -109,7 +109,7 @@ const FormView = BaseView.extend(
 				() => {
 					this.showAlert(
 						'<strong>Submission failed.</strong> An error occured while submitting the form.',
-						0,
+						null,
 						'alert-danger'
 					);
 					this.restoreFromSubmission();

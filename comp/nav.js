@@ -83,7 +83,7 @@ const NavView = BaseView.extend({
 	render() {
 		this.removeNavItems();
 		while (this.el.firstChild) {
-			this.removeChild(this.el.firstChild);
+			this.el.removeChild(this.el.firstChild);
 		}
 
 		const wrapper = this.el.appendChild(document.createElement('ul'));

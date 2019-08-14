@@ -66,11 +66,10 @@ const DatatableView = BaseView.extend(
 		render() {
 			this.removeDatatable();
 			while (this.el.firstChild) {
-				this.removeChild(this.el.firstChild);
+				this.el.removeChild(this.el.firstChild);
 			}
 
 			let datatableDefinition = _.result(this, 'datatableDefinition');
-
 			return Promise.resolve()
 				.then(() => {
 					if (typeof datatableDefinition === 'string') {
@@ -299,7 +298,8 @@ const DatatableView = BaseView.extend(
 			const thead = newTable.appendChild(document.createElement('thead'));
 
 			const tr = thead.appendChild(document.createElement('tr'));
-			this.datatableDefinition.columns.forEach(column => {
+			const datatableDefinition = _.result(this, 'datatableDefinition');
+			datatableDefinition.columns.forEach(column => {
 				const th = tr.appendChild(document.createElement('th'));
 				if (column.title) {
 					th.textContent = column.title;
@@ -363,7 +363,24 @@ const DatatableView = BaseView.extend(
 					}
 				];
 			},
-			dom: `<'row'<'col-sm-6'l><'col-sm-6'f>><'row'<'col-sm-12'<'table-responsive'tr>>><'row'<'col-sm-5'i><'col-sm-7'p>>B`
+			dom: `<'row'<'col-sm-6'l><'col-sm-6'f>><'row'<'col-sm-12'<'table-responsive'tr>>><'row'<'col-sm-5'i><'col-sm-7'p>>B`,
+			methods: {
+				doButtonsCopy() {
+					this.el.querySelector('.buttons-copy').click();
+				},
+				doButtonsCsv() {
+					this.el.querySelector('.buttons-csv').click();
+				},
+				doButtonsExcel() {
+					this.el.querySelector('.buttons-excel').click();
+				},
+				doButtonsPdf() {
+					this.el.querySelector('.buttons-pdf').click();
+				},
+				doButtonsPrint() {
+					this.el.querySelector('.buttons-print').click();
+				}
+			}
 		}
 	}
 );
@@ -394,7 +411,8 @@ const FilteredDatatableView = DatatableView.extend({
 			const tr = thead.appendChild(document.createElement('tr'));
 
 			const promises = [];
-			this.datatableDefinition.columns.forEach((column, index) => {
+			const datatableDefinition = _.result(this, 'datatableDefinition');
+			datatableDefinition.columns.forEach((column, index) => {
 				const th = tr.appendChild(document.createElement('th'));
 
 				if (column.searchable === false) {

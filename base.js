@@ -606,13 +606,18 @@ const BaseModel = Backbone.Model.extend({
 
 	sync(method, model, options) {
 		return Backbone.Model.prototype.sync.call(this, method, model, options).then(returnValue => {
-			this.lastSyncData = JSON.stringify(model.toJSON());
+			this.setSnapShotData();
 			return returnValue;
 		});
 	},
 
+	setSnapShotData() {
+		this.snapShotData = JSON.stringify(this.toJSON());
+		return this;
+	},
+
 	hasChanged() {
-		return this.lastSyncData != JSON.stringify(this.toJSON());
+		return this.snapShotData != JSON.stringify(this.toJSON());
 	},
 
 	webStorage: localStorage,
@@ -673,13 +678,13 @@ const BaseCollection = Backbone.Collection.extend({
 
 	sync(method, model, options) {
 		return Backbone.Collection.prototype.sync.call(this, method, model, options).then(returnValue => {
-			this.lastSyncData = JSON.stringify(model.toJSON());
+			this.snapShotData = JSON.stringify(model.toJSON());
 			return returnValue;
 		});
 	},
 
 	hasChanged() {
-		return this.lastSyncData != JSON.stringify(this.toJSON());
+		return this.snapShotData != JSON.stringify(this.toJSON());
 	},
 
 	webStorage: BaseModel.prototype.webStorage,

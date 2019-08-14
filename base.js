@@ -158,7 +158,7 @@ $.ajaxSetup({
 if (window.cot_app) {
 	const originalRender = window.cot_app.prototype.render;
 	window.cot_app.prototype.render = function() {
-		this.titleElement = document.querySelector('#app-header h1').appendChild(document.createElement('span'));
+		this.titleElement = document.querySelector('#app-header h1'); // .appendChild(document.createElement('span'));
 		this.titleElement.setAttribute('tabindex', '-1');
 
 		return originalRender.call(this);
@@ -281,6 +281,12 @@ if (window.CotForm) {
 				}
 			})
 			.then(() => {
+				const renderer = stringToFunction(definition.preRender);
+				if (renderer) {
+					return renderer.call(this, { cotForm, model, view, definition });
+				}
+			})
+			.then(() => {
 				return renderLoop({
 					definition,
 					renderSection({ definition, section }) {
@@ -328,7 +334,7 @@ if (window.CotForm) {
 									field.choices = field.choicesMap(field.choices);
 								}
 
-								if (field.type === 'dropdown' && field.choices[0].value !== '') {
+								if (field.type === 'dropdown' && (field.choices.length === 0 || field.choices[0].value !== '')) {
 									field.choices.unshift({
 										text: '- Select -',
 										value: ''
@@ -408,6 +414,12 @@ if (window.CotForm) {
 						}
 					}
 				});
+			})
+			.then(() => {
+				const renderer = stringToFunction(definition.postRender);
+				if (renderer) {
+					return renderer.call(this, { cotForm, model, view, definition });
+				}
 			});
 	};
 
@@ -701,7 +713,6 @@ const BaseView = Backbone.View.extend({
 
 	swapWith(nextView) {
 		const element = this.el.parentNode;
-
 		element.style.height = getComputedStyle(this.el).height;
 		element.style.overflow = 'hidden';
 

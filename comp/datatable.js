@@ -459,7 +459,7 @@ const FilteredDatatableView = DatatableView.extend({
 
 							if (choices[0].value !== '') {
 								choices.unshift({
-									text: `Any ${column.title || column.data}`,
+									text: `- Select ${column.title || column.data} -`,
 									value: ''
 								});
 							}

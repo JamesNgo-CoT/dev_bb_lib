@@ -352,7 +352,7 @@ if (window.CotForm) {
 
 								if (field.type === 'dropdown' && (field.choices.length === 0 || field.choices[0].value !== '')) {
 									field.choices.unshift({
-										text: '- Select -',
+										text: `- Select ${field.title} -`,
 										value: ''
 									});
 								}
@@ -495,7 +495,7 @@ Backbone.sync = (originalBackboneSync =>
 
 					const adjustSyncJson = options.adjustSyncJson || model.adjustSyncJson;
 					if (adjustSyncJson) {
-						json = adjustSyncJson(json);
+						json = adjustSyncJson.call(model, json);
 					}
 
 					options.data = JSON.stringify(json);

@@ -126,13 +126,13 @@ const FormView = BaseView.extend(
 			}
 
 			let disabledControl = this.el.querySelector(
-				'.cot-form .form-control:not([disabled]), .cot-form .form-group button:not([disabled])'
+				'.cot-form .form-control:not([disabled]), .cot-form button:not([disabled])'
 			);
 			while (disabledControl) {
 				this.disabledControls.push(disabledControl);
 				disabledControl.setAttribute('disabled', '');
 				disabledControl = this.el.querySelector(
-					'.cot-form .form-control:not([disabled]), .cot-form .form-group button:not([disabled])'
+					'.cot-form .form-control:not([disabled]), .cot-form button:not([disabled])'
 				);
 			}
 		},

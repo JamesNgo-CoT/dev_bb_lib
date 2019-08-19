@@ -7,7 +7,7 @@ const DialogModel = BaseModel.extend({
 		size: 'lg',
 		heading: 'HEADING',
 		body: 'BODY',
-		footer: '<button class="btn btn-primary" data-dismiss="modal">Close</button>'
+		footer: '<button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>'
 	}
 });
 

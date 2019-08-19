@@ -1,39 +1,58 @@
 # Base Library
 
-## GIT
+## Usage
 
-Add the library as a sub-module.
+### GIT
 
-``` shell
+Add the library as a submodule to your CoT project.
+
+```shell
 git submodule add https://github.com/JamesNgo-CoT/dev_bb_lib.git src/scripts/lib
 ```
 
-## NPM
+### NPM
 
-Add datatable dependencies.
+Install dependencies to your CoT projects.
 
-``` shell
+```shell
 npm install CityofToronto/fepe_datatables.git datatables.net-buttons datatables.net-buttons-bs jszip pdfmake
 ```
 
-## PACKAGE JSON
+### PACKAGE JSON
 
-Update `package.json`.
+Update your CoT project's coreConfig to include the "base" requirement.
 
-``` JSON
+```JSON
 {
   "coreConfig": {
+    "isEmbedded": false,
     "includeFormValidation": true,
+    "includeEditableSelect": false,
+    "includeIntlTelInput": false,
+    "includeJQueryMaskedInput": false,
+    "includePlaceholders": false,
+    "includeMultiSelect": false,
+    "includeMap": false,
+    "includeFullCalendar": false,
+    "includeDatePicker": false,
+    "includeLogin": false,
+    "includeRangePicker": false,
+    "includeMoment": false,
     "includeModeling": true,
+    "includeWebtrends": false,
+    "isInternetStandaloneApp": false,
+    "includeDropzone": false,
+    "includeModal": false,
+    "includeTerms": false
   }
 }
 ```
 
-## HTML
+### HTML
 
-Putting it all together.
+Add the required markup to your CoT project.
 
-``` HTML
+```HTML
 <!-- Datatable -->
 <link rel="stylesheet" href="/node_modules/datatables/src/lib/datatables.min.css">
 <link rel="stylesheet" href="/node_modules/datatables.net-buttons-bs/css/buttons.bootstrap.css">
@@ -51,17 +70,49 @@ Putting it all together.
 <script src="/node_modules/datatables.net-buttons-bs/js/buttons.bootstrap.js"></script>
 
 <!-- Base -->
-<script src="<!-- @echo SRC_PATH -->/scripts/lib/utilities.js"></script>
-<script src="<!-- @echo SRC_PATH -->/scripts/lib/corejs_extentions.js"></script>
-<script src="<!-- @echo SRC_PATH -->/scripts/lib/base_backbone.js"></script>
+<script src="<!-- @echo SRC_PATH -->/scripts/lib/base.js"></script>
 
 <!-- Base Components -->
-<script src="<!-- @echo SRC_PATH -->/scripts/lib/comp/login_button.js"></script>
+<script src="<!-- @echo SRC_PATH -->/scripts/lib/login_button.js"></script>
+<script src="<!-- @echo SRC_PATH -->/scripts/lib/alert.js"></script>
+<script src="<!-- @echo SRC_PATH -->/scripts/lib/form.js"></script>
+<script src="<!-- @echo SRC_PATH -->/scripts/lib/login_form.js"></script>
+
 <script src="<!-- @echo SRC_PATH -->/scripts/lib/comp/nav.js"></script>
-<script src="<!-- @echo SRC_PATH -->/scripts/lib/comp/alert.js"></script>
-<script src="<!-- @echo SRC_PATH -->/scripts/lib/comp/form.js"></script>
-<script src="<!-- @echo SRC_PATH -->/scripts/lib/comp/login_form.js"></script>
 <script src="<!-- @echo SRC_PATH -->/scripts/lib/comp/dialog.js"></script>
 <script src="<!-- @echo SRC_PATH -->/scripts/lib/comp/login_form_dialog.js"></script>
 <script src="<!-- @echo SRC_PATH -->/scripts/lib/comp/datatable.js"></script>
 ```
+
+SCSS
+
+Inherit base component's styles.
+
+```SCSS
+@import "../scripts/lib/login_button.scss";
+@import "../scripts/lib/form.scss";
+@import "../scripts/lib/login_form.scss";
+
+.securesite {
+  @extend %LoginButtonViewRoot;
+
+  position: relative;
+
+  [data-view="LoginButtonView"] {
+    position: absolute;
+    right: 65px;
+    top: 8px;
+  }
+}
+
+#maincontent {
+  #dev_bb_lib_proj_container {
+    @extend %FormViewRoot;
+    @extend %LoginFormViewRoot;
+  }
+}
+```
+
+## Login Implementations
+
+

@@ -26,23 +26,27 @@ const AlertView = BaseView.extend({
 			this.el.removeChild(this.el.firstChild);
 		}
 
-		const closeBtn = this.el.appendChild(document.createElement('button'));
-		closeBtn.setAttribute('type', 'button');
-		closeBtn.setAttribute('data-dismiss', 'alert');
-		closeBtn.setAttribute('aria-label', 'Close');
-		closeBtn.classList.add('close');
+		const fragment = document.createDocumentFragment();
 
-		const closeBtnSign = closeBtn.appendChild(document.createElement('span'));
-		closeBtnSign.setAttribute('aria-hidden', 'true');
-		closeBtnSign.innerHTML = '&times;';
+		const btn = fragment.appendChild(document.createElement('button'));
+		btn.setAttribute('type', 'button');
+		btn.setAttribute('data-dismiss', 'alert');
+		btn.setAttribute('aria-label', 'Close');
+		btn.classList.add('close');
 
-		const messageRegion = this.el.appendChild(document.createElement('div'));
+		const btnSpan = btn.appendChild(document.createElement('span'));
+		btnSpan.setAttribute('aria-hidden', 'true');
+		btnSpan.innerHTML = '&times;';
+
+		const messageArea = this.el.appendChild(document.createElement('div'));
 		const message = this.model.get('message');
 		if (typeof message === 'string') {
-			messageRegion.innerHTML = message;
+			messageArea.innerHTML = message;
 		} else {
-			messageRegion.appendChild(message);
+			messageArea.appendChild(message);
 		}
+
+		this.el.appendChild(fragment);
 
 		return BaseView.prototype.render.call(this);
 	},

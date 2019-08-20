@@ -49,7 +49,7 @@ const FormView = BaseView.extend(
 								formDefinition.success ||
 								(event => {
 									event.preventDefault();
-									this.doSubmission();
+									this.success();
 									return false;
 								});
 
@@ -68,7 +68,7 @@ const FormView = BaseView.extend(
 				});
 		},
 
-		prepareForSubmission() {
+		prepareForSuccess() {
 			if (!this.disabledControls) {
 				this.disabledControls = [];
 			}
@@ -85,8 +85,8 @@ const FormView = BaseView.extend(
 			}
 		},
 
-		doSubmission() {
-			this.prepareForSubmission();
+		success() {
+			this.prepareForSuccess();
 			this.model.save().then(
 				() => {
 					this.showAlert(
@@ -94,7 +94,7 @@ const FormView = BaseView.extend(
 						null,
 						'alert-success'
 					);
-					this.restoreFromSubmission();
+					this.restoreFromSuccess();
 					this.trigger('success');
 				},
 				() => {
@@ -103,13 +103,13 @@ const FormView = BaseView.extend(
 						null,
 						'alert-danger'
 					);
-					this.restoreFromSubmission();
+					this.restoreFromSuccess();
 					this.trigger('failed');
 				}
 			);
 		},
 
-		restoreFromSubmission() {
+		restoreFromSuccess() {
 			if (this.disabledControls) {
 				this.disabledControls.forEach(disabledControl => {
 					disabledControl.removeAttribute('disabled');

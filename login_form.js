@@ -66,25 +66,25 @@ const LoginFormView = FormView.extend({
 		]
 	},
 
-	prepareForSubmission() {
-		FormView.prototype.prepareForSubmission.call(this);
+	prepareForSuccess() {
+		FormView.prototype.prepareForSuccess.call(this);
 
 		const button = this.el.querySelector('.btn-login');
 		const buttonText = button.querySelectorAll('span')[1];
 		buttonText.textContent = 'Verifying information';
 	},
 
-	doSubmission() {
-		this.prepareForSubmission();
+	success() {
+		this.prepareForSuccess();
 
-		this.loginModel.login(this.model.toJSON()).then(
+		this.model.login().then(
 			() => {
-				this.restoreFromSubmission();
+				this.restoreFromSuccess();
 				this.showAlert('<strong>Login successful.</strong> You have successfully logged in.', 0, 'alert-success');
 				this.trigger('success');
 			},
 			() => {
-				this.restoreFromSubmission();
+				this.restoreFromSuccess();
 				this.showAlert(
 					'<strong>Login failed.</strong> Please review your user name and password and try again.',
 					0,
@@ -95,8 +95,8 @@ const LoginFormView = FormView.extend({
 		);
 	},
 
-	restoreFromSubmission() {
-		FormView.prototype.restoreFromSubmission.call(this);
+	restoreFromSuccess() {
+		FormView.prototype.restoreFromSuccess.call(this);
 
 		const button = this.el.querySelector('.btn-login');
 		const buttonText = button.querySelectorAll('span')[1];

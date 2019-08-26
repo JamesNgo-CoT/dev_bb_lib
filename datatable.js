@@ -81,6 +81,7 @@ const DatatableView = BaseView.extend(
 					}
 				})
 				.then(() => {
+					datatableDefinition = Object.assign({}, datatableDefinition);
 					if (datatableDefinition.scripts) {
 						return loadScripts(...datatableDefinition.scripts);
 					}

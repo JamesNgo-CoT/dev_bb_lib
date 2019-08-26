@@ -86,16 +86,19 @@ const DatatableView = BaseView.extend(
 					}
 				})
 				.then(() => {
+					datatableDefinition = Object.assign({}, datatableDefinition);
 					// Finalize definition/configuration.
 					datatableDefinition.buttons = _.result(datatableDefinition, 'buttons') || _.result(this, 'buttons');
 					datatableDefinition.dom = _.result(datatableDefinition, 'dom') || _.result(this, 'dom');
 					datatableDefinition.stateSave =
 						_.result(datatableDefinition, 'stateSave') || _.result(this, 'stateSave');
+					datatableDefinition.serverSide = datatableDefinition.serverSide || _.result(this, 'serverSide');
 					datatableDefinition.ajax = datatableDefinition.ajax || ((...args) => this.ajax(...args));
 					datatableDefinition.orderCellsTop =
 						_.result(datatableDefinition, 'orderCellsTop') || _.result(this, 'orderCellsTop');
 
 					// Convert string to functions.
+					datatableDefinition.columns = datatableDefinition.columns.slice(0);
 					datatableDefinition.columns.forEach(column => {
 						column.render = stringToFunction(column.render);
 						column.createdCell = stringToFunction(column.createdCell);
@@ -125,6 +128,8 @@ const DatatableView = BaseView.extend(
 					// Build table.
 					return this.buildTable().then(table => {
 						this.el.appendChild(table);
+
+						console.log('DATATABLE DEFINITION', tempDatatableDefinition);
 
 						// Create Datatable.
 						this.datatable = $(table).DataTable(tempDatatableDefinition);
@@ -156,6 +161,8 @@ const DatatableView = BaseView.extend(
 				return;
 			}
 		},
+
+		serverSide: false,
 
 		ajax(data, callback, settings) {
 			if (settings.oFeatures.bServerSide) {
@@ -256,6 +263,7 @@ const DatatableView = BaseView.extend(
 		ajaxFetch(query, draw, callback) {
 			return this.collection.fetch({ query }).then(
 				({ data }) => {
+					console.log('DATA', this.collection.toJSON());
 					callback({
 						data: this.collection.toJSON(),
 						draw,

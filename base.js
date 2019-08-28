@@ -755,11 +755,8 @@ const LoginModel = BaseModel.extend({
 
 		this.webStorageFetch();
 
-		console.log('IS LOGGED IN', this.isLoggedIn());
 		if (this.isLoggedIn()) {
-			console.log('FETCHING');
 			return this.fetch().catch(() => {
-				console.log('FETCH SUCCESSFUL')
 			}, () => {
 				this.clear();
 			});
@@ -809,8 +806,6 @@ const LoginModel = BaseModel.extend({
 				) {
 					return this.isLoggedIn();
 				}
-
-				console.log('AUTHENTICATION - FETCHING');
 
 				return this.fetch(options).then(
 					() => {

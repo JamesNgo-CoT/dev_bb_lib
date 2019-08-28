@@ -13,8 +13,6 @@ const LoginButtonView = BaseView.extend({
 				redirect: Backbone.history.getFragment()
 			});
 
-			console.log(`${fragment}?${query}`);
-
 			Backbone.history.navigate(`${fragment}?${query}`, { trigger: true });
 		},
 

@@ -38,7 +38,7 @@ const AlertView = BaseView.extend({
 		btnSpan.setAttribute('aria-hidden', 'true');
 		btnSpan.innerHTML = '&times;';
 
-		const messageArea = this.el.appendChild(document.createElement('div'));
+		const messageArea = fragment.appendChild(document.createElement('div'));
 		const message = this.model.get('message');
 		if (typeof message === 'string') {
 			messageArea.innerHTML = message;

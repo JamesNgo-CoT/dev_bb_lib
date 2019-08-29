@@ -756,10 +756,12 @@ const LoginModel = BaseModel.extend({
 		this.webStorageFetch();
 
 		if (this.isLoggedIn()) {
-			return this.fetch().catch(() => {
-			}, () => {
-				this.clear();
-			});
+			return this.fetch().catch(
+				() => {},
+				() => {
+					this.clear();
+				}
+			);
 		}
 
 		BaseModel.prototype.initialize.call(this, attributes, options);

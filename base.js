@@ -368,9 +368,16 @@ if (window.CotForm) {
 										const choices = field.choices.map(choice =>
 											choice.value != null ? choice.value : choice.text
 										);
-										if (choices.indexOf(value) === -1) {
-											field.choices.unshift({ text: value, value });
+
+										if (!Array.isArray(value)) {
+											value = [value];
 										}
+
+										value.forEach(val => {
+											if (choices.indexOf(val) === -1) {
+												field.choices.unshift({ text: value, value });
+											}
+										});
 									}
 								}
 							});

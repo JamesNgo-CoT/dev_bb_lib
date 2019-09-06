@@ -96,6 +96,8 @@ const DatatableView = BaseView.extend(
 					datatableDefinition.orderCellsTop =
 						_.result(datatableDefinition, 'orderCellsTop') || _.result(this, 'orderCellsTop');
 
+					datatableDefinition.serverSide = _.result(datatableDefinition, 'serverSide') || _.result(this, 'serverSide');
+
 					// Convert string to functions.
 					datatableDefinition.columns.forEach(column => {
 						column.render = stringToFunction(column.render);

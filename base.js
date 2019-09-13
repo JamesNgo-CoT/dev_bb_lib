@@ -351,7 +351,7 @@ if (window.CotForm) {
 									(field.choices.length === 0 || field.choices[0].value !== '')
 								) {
 									field.choices.unshift({
-										text: `- Select ${field.title} -`,
+										text: `- Select -`,
 										value: ''
 									});
 								}

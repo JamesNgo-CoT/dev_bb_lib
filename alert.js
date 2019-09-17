@@ -26,9 +26,9 @@ const AlertView = BaseView.extend({
 			this.el.removeChild(this.el.firstChild);
 		}
 
-		const fragment = document.createDocumentFragment();
+		const docFragment = document.createDocumentFragment();
 
-		const btn = fragment.appendChild(document.createElement('button'));
+		const btn = docFragment.appendChild(document.createElement('button'));
 		btn.setAttribute('type', 'button');
 		btn.setAttribute('data-dismiss', 'alert');
 		btn.setAttribute('aria-label', 'Close');
@@ -38,7 +38,7 @@ const AlertView = BaseView.extend({
 		btnSpan.setAttribute('aria-hidden', 'true');
 		btnSpan.innerHTML = '&times;';
 
-		const messageArea = fragment.appendChild(document.createElement('div'));
+		const messageArea = docFragment.appendChild(document.createElement('div'));
 		const message = this.model.get('message');
 		if (typeof message === 'string') {
 			messageArea.innerHTML = message;
@@ -46,7 +46,7 @@ const AlertView = BaseView.extend({
 			messageArea.appendChild(message);
 		}
 
-		this.el.appendChild(fragment);
+		this.el.appendChild(docFragment);
 
 		return BaseView.prototype.render.call(this);
 	},

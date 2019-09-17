@@ -4,9 +4,6 @@
 const LoginButtonView = BaseView.extend({
 	attributes: { 'data-view': 'LoginButtonView' },
 
-	loginFragment: 'login',
-	logoutFragment: 'logout',
-
 	initialize(options = {}) {
 		this.listenTo(this.model, 'change', () => {
 			this.render();
@@ -14,6 +11,9 @@ const LoginButtonView = BaseView.extend({
 
 		BaseView.prototype.initialize.call(this, options);
 	},
+
+	loginFragment: 'login',
+	logoutFragment: 'logout',
 
 	render() {
 		while (this.el.firstChild) {
@@ -24,10 +24,10 @@ const LoginButtonView = BaseView.extend({
 			const currentFragment = Backbone.history.getFragment().split('?')[0];
 			const loginFragment = _.result(this, 'loginFragment');
 			if (currentFragment !== loginFragment) {
-				const fragment = document.createDocumentFragment();
+				const docFragment = document.createDocumentFragment();
 
 				if (this.model.isLoggedIn()) {
-					const link = fragment.appendChild(document.createElement('a'));
+					const link = docFragment.appendChild(document.createElement('a'));
 					link.classList.add('btn', 'btn-default', 'btn-logout');
 
 					const logoutFragment = _.result(this, 'logoutFragment');
@@ -42,7 +42,7 @@ const LoginButtonView = BaseView.extend({
 						: this.model.get('userID');
 					link.innerHTML = `Logout: <strong>${name}</strong>`;
 				} else {
-					const link = fragment.appendChild(document.createElement('a'));
+					const link = docFragment.appendChild(document.createElement('a'));
 					link.classList.add('btn', 'btn-default', 'btn-login');
 					link.innerHTML = 'Login';
 
@@ -57,7 +57,7 @@ const LoginButtonView = BaseView.extend({
 					}
 					link.setAttribute('href', `#${loginFragment}?${query}`);
 				}
-				this.el.appendChild(fragment);
+				this.el.appendChild(docFragment);
 			}
 		}
 

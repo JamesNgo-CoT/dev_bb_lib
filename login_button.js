@@ -4,38 +4,8 @@
 const LoginButtonView = BaseView.extend({
 	attributes: { 'data-view': 'LoginButtonView' },
 
-	events: {
-		['click .btn-logout'](event) {
-			event.preventDefault();
-
-			const fragment = _.result(this, 'logoutFragment');
-			const query = toQueryString({
-				redirect: Backbone.history.getFragment()
-			});
-
-			Backbone.history.navigate(`${fragment}?${query}`, { trigger: true });
-		},
-
-		['click .btn-login'](event) {
-			event.preventDefault();
-
-			const fragment = _.result(this, 'loginFragment');
-
-			const currentFragment = Backbone.history.getFragment().split('?')[0];
-			const logoutFragment = _.result(this, 'logoutFragment');
-
-			let query;
-			if (currentFragment === logoutFragment) {
-				query = Backbone.history.getFragment().split('?')[1] || '';
-			} else {
-				query = toQueryString({
-					redirect: Backbone.history.getFragment()
-				});
-			}
-
-			Backbone.history.navigate(`${fragment}?${query}`, { trigger: true });
-		}
-	},
+	loginFragment: 'login',
+	logoutFragment: 'logout',
 
 	initialize(options = {}) {
 		this.listenTo(this.model, 'change', () => {
@@ -56,23 +26,37 @@ const LoginButtonView = BaseView.extend({
 			if (currentFragment !== loginFragment) {
 				const fragment = document.createDocumentFragment();
 
-				const btn = fragment.appendChild(document.createElement('button'));
-				btn.setAttribute('type', 'button');
-				btn.classList.add('btn', 'btn-default');
-
 				if (this.model.isLoggedIn()) {
-					btn.classList.add('btn', 'btn-logout');
+					const link = fragment.appendChild(document.createElement('a'));
+					link.classList.add('btn', 'btn-default', 'btn-logout');
+
+					const logoutFragment = _.result(this, 'logoutFragment');
+					const query = toQueryString({
+						redirect: Backbone.history.getFragment()
+					});
+					link.setAttribute('href', `#${logoutFragment}?${query}`);
 
 					const cotUser = this.model.get('cotUser');
 					const name = cotUser
 						? [cotUser.lastName, cotUser.firstName].filter(value => value).join(', ')
 						: this.model.get('userID');
-					btn.innerHTML = `Logout: <strong>${name}</strong>`;
+					link.innerHTML = `Logout: <strong>${name}</strong>`;
 				} else {
-					btn.classList.add('btn', 'btn-login');
-					btn.innerHTML = 'Login';
-				}
+					const link = fragment.appendChild(document.createElement('a'));
+					link.classList.add('btn', 'btn-default', 'btn-login');
+					link.innerHTML = 'Login';
 
+					const logoutFragment = _.result(this, 'logoutFragment');
+					let query;
+					if (currentFragment === logoutFragment) {
+						query = Backbone.history.getFragment().split('?')[1] || '';
+					} else {
+						query = toQueryString({
+							redirect: Backbone.history.getFragment()
+						});
+					}
+					link.setAttribute('href', `#${loginFragment}?${query}`);
+				}
 				this.el.appendChild(fragment);
 			}
 		}

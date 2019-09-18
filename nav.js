@@ -3,11 +3,12 @@
 /* exported NavItemModel */
 const NavItemModel = BaseModel.extend({
 	defaults: {
+		id: null,
 		title: 'Untitled',
 		fragment: '',
 		isActive: false,
 		isVisible: true,
-		requiresLogin: false
+		group: null
 	}
 });
 
@@ -47,12 +48,25 @@ const NavItemView = BaseView.extend({
 const NavCollection = BaseCollection.extend({
 	model: NavItemModel,
 
-	setActive(index) {
-		this.each((model, modelIndex) => {
-			if (index === modelIndex) {
-				model.set('isActive', true);
+	setActive(index, group) {
+		this.forEach((model, modelIndex) => {
+			if (group == null || group === model.get('group')) {
+				if (typeof index === 'number') {
+					if (index === modelIndex) {
+						model.set('isActive', true);
+					} else {
+						model.set('isActive', false);
+					}
+				} else {
+					if (index === model.id) {
+						model.set('isActive', true);
+					} else {
+						model.set('isActive', false);
+					}
+				}
+				model.set('isVisible', true);
 			} else {
-				model.set('isActive', false);
+				model.set('isVisible', false);
 			}
 		});
 	}
@@ -63,40 +77,44 @@ const NavView = BaseView.extend({
 	attributes: { role: 'navigation', 'data-view': 'NavView' },
 
 	initialize(options) {
-		this.navItems = [];
 		this.listenTo(options.collection, 'update', () => {
 			this.render();
 		});
 		BaseView.prototype.initialize.call(this, options);
 	},
 
-	removeNavItems() {
-		this.navItems.forEach(navItem => navItem.remove());
-		this.navItems = [];
-	},
-
-	remove() {
-		this.removeNavItems();
-		BaseView.prototype.remove.call(this);
-	},
-
 	render() {
-		this.removeNavItems();
+		this.removeSubViews();
 		while (this.el.firstChild) {
 			this.el.removeChild(this.el.firstChild);
 		}
+		this.subViews = [];
 
-		const wrapper = this.el.appendChild(document.createElement('ul'));
+		const promises = [];
+
+		const docFragment = document.createDocumentFragment();
+
+		const wrapper = docFragment.appendChild(document.createElement('ul'));
 		wrapper.classList.add('nav', 'nav-tabs');
 
-		return Promise.all(
-			this.collection.map(model => {
-				const navItemView = new NavItemView({ model });
-				this.navItems.push(navItemView);
-				return navItemView.appendTo(this.el).render();
-			})
-		).then(() => {
-			return BaseView.prototype.render.call(this);
+		this.collection.forEach(model => {
+			const navItemView = new NavItemView({ model });
+			this.subViews.push(navItemView);
+			promises.push(navItemView.appendTo(wrapper).render());
 		});
+
+		this.el.appendChild(docFragment);
+
+		return Promise.all(promises).then(() => BaseView.prototype.render.call(this));
+	},
+
+	hide() {
+		this.el.classList.add('hide');
+		return this;
+	},
+
+	show() {
+		this.el.classList.remove('hide');
+		return this;
 	}
 });

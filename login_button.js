@@ -5,7 +5,7 @@ const LoginButtonView = BaseView.extend({
 	attributes: { 'data-view': 'LoginButtonView' },
 
 	initialize(options = {}) {
-		this.listenTo(this.model, 'change', () => {
+		this.listenTo(options.model, 'change', () => {
 			this.render();
 		});
 

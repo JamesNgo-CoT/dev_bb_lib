@@ -1,7 +1,9 @@
 %NavView {
-	border-bottom: 3px solid #165788;
-	margin-bottom: 1rem;
-
+	& > div {
+		border-bottom: 3px solid #165788;
+		margin-bottom: 1rem;
+	}
+	
 	.nav.nav-tabs {
 		overflow: visible;
 

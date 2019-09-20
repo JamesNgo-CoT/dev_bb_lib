@@ -83,6 +83,9 @@ const NavView = BaseView.extend({
 		this.listenTo(options.collection, 'update', () => {
 			this.render();
 		});
+		this.listenTo(options.collection, 'reset', () => {
+			this.render();
+		});
 		BaseView.prototype.initialize.call(this, options);
 	},
 
@@ -95,18 +98,22 @@ const NavView = BaseView.extend({
 
 		const promises = [];
 
-		const docFragment = document.createDocumentFragment();
+		if (this.collection.length > 0) {
+			const docFragment = document.createDocumentFragment();
 
-		const wrapper = docFragment.appendChild(document.createElement('ul'));
-		wrapper.classList.add('nav', 'nav-tabs');
+			const outerWrapper = docFragment.appendChild(document.createElement('div'));
 
-		this.collection.forEach(model => {
-			const navItemView = new NavItemView({ model });
-			this.subViews.push(navItemView);
-			promises.push(navItemView.appendTo(wrapper).render());
-		});
+			const wrapper = outerWrapper.appendChild(document.createElement('ul'));
+			wrapper.classList.add('nav', 'nav-tabs');
 
-		this.el.appendChild(docFragment);
+			this.collection.forEach(model => {
+				const navItemView = new NavItemView({ model });
+				this.subViews.push(navItemView);
+				promises.push(navItemView.appendTo(wrapper).render());
+			});
+
+			this.el.appendChild(docFragment);
+		}
 
 		return Promise.all(promises).then(() => BaseView.prototype.render.call(this));
 	},

@@ -48,7 +48,7 @@ const NavItemView = BaseView.extend({
 const NavCollection = BaseCollection.extend({
 	model: NavItemModel,
 
-	setActive(index, group) {
+	setActive(index, group, activeCallback) {
 		this.forEach((model, modelIndex) => {
 			if (group == null || group === model.get('group')) {
 				if (typeof index === 'number') {
@@ -63,6 +63,9 @@ const NavCollection = BaseCollection.extend({
 					} else {
 						model.set('isActive', false);
 					}
+				}
+				if (activeCallback) {
+					activeCallback(model, modelIndex);
 				}
 				model.set('isVisible', true);
 			} else {

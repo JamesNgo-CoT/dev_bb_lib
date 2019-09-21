@@ -35,6 +35,149 @@ function escapeODataValue(value) {
 		.replace(/\s/g, '%20');
 }
 
+/* exported htm */
+function htm(el, attrs, childEls, cbks) {
+
+	// FINALIZE ELEMENT
+	if (typeof el === 'string') {
+		el = document.createElement(el);
+	}
+	if (!el.hasHtmPropertyDescriptors) {
+		Object.defineProperties(el, htm.propertyDescriptors);
+	}
+
+	// FINALIZE ATTRIBUTES
+	el.attrs = Object.assign({}, attrs);
+	for (let index = 0, length = el.attributes.length; index < length; index++) {
+		if (!(el.attributes[index].name in el.attrs)) {
+			el.attrs[el.attributes[index].name] = el.attributes[index].value;
+		}
+	}
+
+	// FINALIZE CHILD ELEMENTS
+	el.childEls = ((childEls) => !Array.isArray(childEls) ? [childEls] : childEls.slice())(childEls || []);
+	const tempChildEls = [];
+	for (let index = 0, length = el.childNodes.length; index < length; index++) {
+		tempChildEls.push(el.childNodes[index]);
+	}
+	el.childEls.unshift(tempChildEls);
+
+	// RENDER ELEMENT
+	el.render(cbks);
+
+	return el;
+}
+htm.propertyDescriptors = {
+	hasHtmPropertyDescriptors: {
+		value: true
+	},
+
+	attrs: {
+		writable: true
+	},
+
+	childEls: {
+		writable: true
+	},
+
+	render: {
+		value(cbks) {
+
+			// REMOVE OLD ATTRIBUTES
+			const attributeKeys = [];
+			for (let index = 0, length = this.attributes.length; index < length; index++) {
+				attributeKeys.push(this.attributes[index].name);
+			}
+			attributeKeys.forEach((key) => {
+				this.removeAttribute(key);
+			});
+
+			// REMOVE OLD CHILD ELEMENTS
+			while (this.firstChild) {
+				this.removeChild(this.firstChild);
+			}
+
+			// CLONE VALUES
+			const attrs = Object.assign({}, this.attrs);
+			const childEls = ((childEls) => !Array.isArray(childEls) ? [childEls] : childEls.slice())(this.childEls || []);
+
+			Promise
+				.all([
+
+					// FINALIZE NEW ATTRIBUTES
+					...Object.keys(attrs)
+						.map((key) => {
+							return Promise
+								.resolve()
+								.then(() => {
+									if (typeof attrs[key] === 'function') {
+										return attrs[key](this);
+									}
+									return attrs[key];
+								})
+								.then((finalAttrs) => {
+									attrs[key] = finalAttrs;
+								});
+						}),
+
+					// FINALIZE NEW CHILD ELEMENTS
+					...childEls
+						.map((childEl, index) => {
+							return Promise
+								.resolve()
+								.then(() => {
+									if (typeof childEl === 'function') {
+										return childEl(this);
+									}
+									return childEl;
+								})
+								.then((finalChildEl) => {
+									childEls[index] = finalChildEl;
+								})
+						})
+				])
+				.then(() => {
+
+					// SET NEW ATTRIBUTES
+					Object.keys(attrs).forEach((key) => {
+						if (attrs[key] != null) {
+							if (typeof attrs[key] === 'boolean') {
+								this.setAttribute(key, '');
+							} else {
+								this.setAttribute(key, attrs[key]);
+							}
+						}
+					});
+
+					// APPEND NEW CHILD ELEMENTS
+					childEls.forEach((childEl) => {
+						if (childEl) {
+							if (typeof childEl === 'string') {
+								if (childEls.length === 1) {
+									this.innerHTML = childEl;
+									return;
+								}
+								childEl = document.createTextNode(childEl);
+							}
+							this.appendChild(childEl);
+						}
+					});
+
+					// CALL CALLBACKS
+					if (cbks) {
+						cbks.forEach((cbk) => {
+							cbk(this);
+						});
+					}
+
+					return this;
+				});
+
+			return this;
+		}
+	}
+};
+
 /* exported loadScripts */
 function loadScripts(...urls) {
 	return Promise.all(
@@ -594,6 +737,11 @@ const BaseRouter = Backbone.Router.extend({
 
 /* exported BaseModel */
 const BaseModel = Backbone.Model.extend({
+	initialize(attributes, options = {}) {
+		this.loginModel = options.loginModel;
+		Backbone.Model.prototype.initialize.call(this, attributes, options);
+	},
+
 	url() {
 		const base = _.result(this, 'urlRoot') || _.result(this.collection, 'url');
 		if (this.isNew()) {
@@ -653,6 +801,11 @@ const BaseModel = Backbone.Model.extend({
 
 /* exported BaseCollection */
 const BaseCollection = Backbone.Collection.extend({
+	initialize(models, options = {}) {
+		this.loginModel = options.loginModel;
+		Backbone.Collection.prototype.initialize.call(this, models, options);
+	},
+
 	model: BaseModel,
 
 	fetch(options) {
@@ -804,6 +957,8 @@ const LoginModel = BaseModel.extend({
 		return this.destroy();
 	},
 	authentication(options = {}) {
+		console.log('LOGIN MODEL AUTHENTICATION');
+
 		return Promise.resolve().then(() => {
 			if (!this.isLoggedIn()) {
 				return false;
@@ -811,8 +966,9 @@ const LoginModel = BaseModel.extend({
 				if (
 					options.ignoreLastAuthentication !== true &&
 					this.lastAuthentication &&
-					Math.abs((new Date().getTime() - this.lastAuthentication.getTime()) / 1000 / 60 / 60) < 5
+					Math.floor((new Date().getTime() - this.lastAuthentication.getTime()) / 1000 / 60 / 60) < 5
 				) {
+					console.log('LAST AUTHENTICATION OCCURENT RECENTLY', Math.floor((new Date().getTime() - this.lastAuthentication.getTime()) / 1000 / 60 / 60), 'MINUTES AGO');
 					return this.isLoggedIn();
 				}
 
@@ -823,7 +979,7 @@ const LoginModel = BaseModel.extend({
 					},
 					() => {
 						this.clear();
-						this.isLoggedIn();
+						return this.isLoggedIn();
 					}
 				);
 			}

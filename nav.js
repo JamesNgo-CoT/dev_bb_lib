@@ -112,6 +112,7 @@ const NavView = BaseView.extend({
 		this.listenTo(options.collection, 'reset', () => {
 			this.render();
 		});
+
 		BaseView.prototype.initialize.call(this, options);
 	},
 

@@ -752,6 +752,7 @@ const BaseRouter = Backbone.Router.extend({
 const BaseModel = Backbone.Model.extend({
 	initialize(attributes, options = {}) {
 		this.loginModel = options.loginModel;
+
 		Backbone.Model.prototype.initialize.call(this, attributes, options);
 	},
 
@@ -829,6 +830,7 @@ const BaseModel = Backbone.Model.extend({
 const BaseCollection = Backbone.Collection.extend({
 	initialize(models, options = {}) {
 		this.loginModel = options.loginModel;
+
 		Backbone.Collection.prototype.initialize.call(this, models, options);
 	},
 

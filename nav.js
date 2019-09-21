@@ -22,6 +22,7 @@ const NavItemView = BaseView.extend({
 		this.listenTo(options.model, 'change', () => {
 			this.render();
 		});
+
 		BaseView.prototype.initialize.call(this, options);
 	},
 

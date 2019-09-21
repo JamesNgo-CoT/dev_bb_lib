@@ -1,7 +1,10 @@
-/* global BaseModel BaseView */
+/* global htm BaseModel BaseView */
 
 /* exported AlertModel */
 const AlertModel = BaseModel.extend({
+
+	// PROPERTY
+
 	defaults: {
 		message: null
 	}
@@ -9,19 +12,27 @@ const AlertModel = BaseModel.extend({
 
 /* exported AlertView */
 const AlertView = BaseView.extend({
-	attributes: {
-		role: 'alert',
-		'data-view': 'AlertView'
-	},
-
-	className: 'alert alert-danger alert-dismissible',
-
 	initialize(options) {
 		this.listenTo(options.model, 'change', () => {
 			this.render();
 		});
 
 		return BaseView.prototype.initialize.call(this, options);
+	},
+
+	// PROPERTIES
+
+	attributes: {
+		'role': 'alert',
+		'data-view': 'AlertView'
+	},
+
+	className: 'alert alert-danger alert-dismissible',
+
+	// METHODS
+
+	close() {
+		this.el.querySelector('button[data-dismiss="alert"]').click();
 	},
 
 	render() {
@@ -31,30 +42,20 @@ const AlertView = BaseView.extend({
 
 		const docFragment = document.createDocumentFragment();
 
-		const btn = docFragment.appendChild(document.createElement('button'));
-		btn.setAttribute('type', 'button');
-		btn.setAttribute('data-dismiss', 'alert');
-		btn.setAttribute('aria-label', 'Close');
-		btn.classList.add('close');
-
-		const btnSpan = btn.appendChild(document.createElement('span'));
-		btnSpan.setAttribute('aria-hidden', 'true');
-		btnSpan.innerHTML = '&times;';
-
-		const messageArea = docFragment.appendChild(document.createElement('div'));
-		const message = this.model.get('message');
-		if (typeof message === 'string') {
-			messageArea.innerHTML = message;
-		} else {
-			messageArea.appendChild(message);
-		}
+		docFragment.appendChild(htm('button', {
+			'class': 'close',
+			'type': 'button',
+			'data-dismiss': 'alert',
+			'aria-label': 'Close'
+		}, [
+			htm('span', { 'aria-hidden': 'true' }, ['&times;'])
+		], []));
+		docFragment.appendChild(htm('div', {}, [
+			this.model.get('message')
+		], []))
 
 		this.el.appendChild(docFragment);
 
 		return BaseView.prototype.render.call(this);
-	},
-
-	close() {
-		this.el.querySelector('button[data-dismiss="alert"]').click();
 	}
 });

@@ -9,7 +9,10 @@ const AlertModel = BaseModel.extend({
 
 /* exported AlertView */
 const AlertView = BaseView.extend({
-	attributes: { role: 'alert', 'data-view': 'AlertView' },
+	attributes: {
+		role: 'alert',
+		'data-view': 'AlertView'
+	},
 
 	className: 'alert alert-danger alert-dismissible',
 
@@ -18,7 +21,7 @@ const AlertView = BaseView.extend({
 			this.render();
 		});
 
-		BaseView.prototype.initialize.call(this, options);
+		return BaseView.prototype.initialize.call(this, options);
 	},
 
 	render() {

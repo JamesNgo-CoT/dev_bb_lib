@@ -1,7 +1,10 @@
-/* global BaseModel BaseCollection BaseView */
+/* global htm BaseModel BaseCollection BaseView */
 
 /* exported NavItemModel */
 const NavItemModel = BaseModel.extend({
+
+	// PROPERTY
+
 	defaults: {
 		id: null,
 		title: 'Untitled',
@@ -14,10 +17,6 @@ const NavItemModel = BaseModel.extend({
 
 /* exported NavItemView */
 const NavItemView = BaseView.extend({
-	attributes: { role: 'presentation', 'data-view': 'NavItemView' },
-
-	tagName: 'li',
-
 	initialize(options) {
 		this.listenTo(options.model, 'change', () => {
 			this.render();
@@ -26,8 +25,21 @@ const NavItemView = BaseView.extend({
 		BaseView.prototype.initialize.call(this, options);
 	},
 
+	// PROPERTIES
+
+	attributes: {
+		'role': 'presentation',
+		'data-view': 'NavItemView'
+	},
+
+	tagName: 'li',
+
+	// METHODS
+
 	render() {
-		this.el.innerHTML = `<a href="#${this.model.escape('fragment')}">${this.model.escape('title')}</a>`;
+		while (this.el.firstChild) {
+			this.el.removeChild(this.el.firstChild);
+		}
 
 		if (this.model.get('isActive')) {
 			this.el.classList.add('active');
@@ -41,13 +53,28 @@ const NavItemView = BaseView.extend({
 			this.el.classList.add('hide');
 		}
 
+		const docFragment = document.createDocumentFragment();
+
+		docFragment.appendChild(htm('a', {
+			'href': `#${this.model.escape('fragment')}`
+		}, [
+			this.model.escape('title')
+		], []));
+
+		this.el.appendChild(docFragment);
+
 		return BaseView.prototype.render.call(this);
 	}
 });
 
 /* exported NavCollection */
 const NavCollection = BaseCollection.extend({
+
+	// PROPERTY
+
 	model: NavItemModel,
+
+	// METHOD
 
 	setActive(index, group, activeCallback) {
 		this.forEach((model, modelIndex) => {
@@ -78,8 +105,6 @@ const NavCollection = BaseCollection.extend({
 
 /* exported NavView */
 const NavView = BaseView.extend({
-	attributes: { role: 'navigation', 'data-view': 'NavView' },
-
 	initialize(options) {
 		this.listenTo(options.collection, 'update', () => {
 			this.render();
@@ -89,6 +114,15 @@ const NavView = BaseView.extend({
 		});
 		BaseView.prototype.initialize.call(this, options);
 	},
+
+	// PROPERTY
+
+	attributes: {
+		'role': 'navigation',
+		'data-view': 'NavView'
+	},
+
+	// METHOD
 
 	render() {
 		this.removeSubViews();
@@ -102,30 +136,22 @@ const NavView = BaseView.extend({
 		if (this.collection.length > 0) {
 			const docFragment = document.createDocumentFragment();
 
-			const outerWrapper = docFragment.appendChild(document.createElement('div'));
-
-			const wrapper = outerWrapper.appendChild(document.createElement('ul'));
-			wrapper.classList.add('nav', 'nav-tabs');
-
-			this.collection.forEach(model => {
-				const navItemView = new NavItemView({ model });
-				this.subViews.push(navItemView);
-				promises.push(navItemView.appendTo(wrapper).render());
-			});
+			docFragment.appendChild(htm('div', {}, [
+				htm('ul', {
+					'class': 'nav nav-tabs'
+				}, [
+					...this.collection.map((model) => {
+						const navItemView = new NavItemView({ model });
+						navItemView.render();
+						this.subViews.push(navItemView);
+						return navItemView.el;
+					})
+				], [])
+			], []));
 
 			this.el.appendChild(docFragment);
 		}
 
 		return Promise.all(promises).then(() => BaseView.prototype.render.call(this));
-	},
-
-	hide() {
-		this.el.classList.add('hide');
-		return this;
-	},
-
-	show() {
-		this.el.classList.remove('hide');
-		return this;
 	}
 });

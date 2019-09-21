@@ -2,6 +2,9 @@
 
 /* exported LoginFormView */
 const LoginFormView = FormView.extend({
+
+	// PROPERTIES
+
 	attributes: { 'data-view': 'LoginFormView' },
 
 	events: {
@@ -66,12 +69,22 @@ const LoginFormView = FormView.extend({
 		]
 	},
 
+	// METHODS
+
 	prepareForSuccess() {
 		FormView.prototype.prepareForSuccess.call(this);
 
 		const button = this.el.querySelector('.btn-login');
 		const buttonText = button.querySelectorAll('span')[1];
 		buttonText.textContent = 'Verifying information';
+	},
+
+	restoreFromSuccess() {
+		FormView.prototype.restoreFromSuccess.call(this);
+
+		const button = this.el.querySelector('.btn-login');
+		const buttonText = button.querySelectorAll('span')[1];
+		buttonText.textContent = 'Login';
 	},
 
 	success() {
@@ -85,21 +98,10 @@ const LoginFormView = FormView.extend({
 			},
 			() => {
 				this.restoreFromSuccess();
-				this.showAlert(
-					'<strong>Login failed.</strong> Please review your user name and password and try again.',
-					0,
-					'alert-danger'
-				);
+				this.showAlert('<strong>Login failed.</strong> Please review your user name and password and try again.',
+					0, 'alert-danger');
 				this.trigger('failed');
 			}
 		);
-	},
-
-	restoreFromSuccess() {
-		FormView.prototype.restoreFromSuccess.call(this);
-
-		const button = this.el.querySelector('.btn-login');
-		const buttonText = button.querySelectorAll('span')[1];
-		buttonText.textContent = 'Login';
 	}
 });

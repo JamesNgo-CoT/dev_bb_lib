@@ -1,9 +1,7 @@
-/* global _ Backbone toQueryString BaseView */
+/* global htm _ Backbone toQueryString BaseView */
 
 /* exported LoginButtonView */
 const LoginButtonView = BaseView.extend({
-	attributes: { 'data-view': 'LoginButtonView' },
-
 	initialize(options = {}) {
 		this.listenTo(options.model, 'change', () => {
 			this.render();
@@ -12,8 +10,16 @@ const LoginButtonView = BaseView.extend({
 		BaseView.prototype.initialize.call(this, options);
 	},
 
+	// PROPERTIES
+
+	attributes: {
+		'data-view': 'LoginButtonView'
+	},
+
 	loginFragment: 'login',
 	logoutFragment: 'logout',
+
+	// METHOD
 
 	render() {
 		while (this.el.firstChild) {
@@ -27,25 +33,23 @@ const LoginButtonView = BaseView.extend({
 				const docFragment = document.createDocumentFragment();
 
 				if (this.model.isLoggedIn()) {
-					const link = docFragment.appendChild(document.createElement('a'));
-					link.classList.add('btn', 'btn-default', 'btn-logout');
-
 					const logoutFragment = _.result(this, 'logoutFragment');
 					const query = toQueryString({
 						redirect: Backbone.history.getFragment()
 					});
-					link.setAttribute('href', `#${logoutFragment}?${query}`);
 
 					const cotUser = this.model.get('cotUser');
 					const name = cotUser
 						? [cotUser.lastName, cotUser.firstName].filter(value => value).join(', ')
 						: this.model.get('userID');
-					link.innerHTML = `Logout: <strong>${name}</strong>`;
-				} else {
-					const link = docFragment.appendChild(document.createElement('a'));
-					link.classList.add('btn', 'btn-default', 'btn-login');
-					link.innerHTML = 'Login';
 
+					docFragment.appendChild(htm('a', {
+						'class': 'btn btn-default btn-logout',
+						'href': `#${logoutFragment}?${query}`
+					}, [
+						`Logout: <strong>${name}</strong>`
+					], []));
+				} else {
 					const logoutFragment = _.result(this, 'logoutFragment');
 					let query;
 					if (currentFragment === logoutFragment) {
@@ -55,8 +59,15 @@ const LoginButtonView = BaseView.extend({
 							redirect: Backbone.history.getFragment()
 						});
 					}
-					link.setAttribute('href', `#${loginFragment}?${query}`);
+
+					docFragment.appendChild(htm('a', {
+						'class': 'btn btn-default btn-login',
+						'href': `#${loginFragment}?${query}`
+					}, [
+						'Login'
+					], []));
 				}
+
 				this.el.appendChild(docFragment);
 			}
 		}

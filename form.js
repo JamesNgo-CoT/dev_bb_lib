@@ -3,17 +3,41 @@
 /* exported FormView */
 const FormView = BaseView.extend(
 	{
-		attributes: { 'data-view': 'FormView' },
 
-		removeCotForm() {
-			this.cotForm = null;
-			this.form = null;
-			this.formValidator = null;
+		// PROPERTY
+
+		attributes: {
+			'data-view': 'FormView'
+		},
+
+		// METHODS
+
+		prepareForSuccess() {
+			if (!this.disabledControls) {
+				this.disabledControls = [];
+			}
+
+			let disabledControl = this.el.querySelector(
+				'.cot-form .form-control:not([disabled]), .cot-form button:not([disabled])'
+			);
+			while (disabledControl) {
+				this.disabledControls.push(disabledControl);
+				disabledControl.setAttribute('disabled', '');
+				disabledControl = this.el.querySelector(
+					'.cot-form .form-control:not([disabled]), .cot-form button:not([disabled])'
+				);
+			}
 		},
 
 		remove() {
 			this.removeCotForm();
 			BaseView.prototype.remove.call(this);
+		},
+
+		removeCotForm() {
+			this.cotForm = null;
+			this.form = null;
+			this.formValidator = null;
 		},
 
 		render() {
@@ -68,21 +92,29 @@ const FormView = BaseView.extend(
 				});
 		},
 
-		prepareForSuccess() {
-			if (!this.disabledControls) {
-				this.disabledControls = [];
+		restoreFromSuccess() {
+			if (this.disabledControls) {
+				this.disabledControls.forEach(disabledControl => {
+					disabledControl.removeAttribute('disabled');
+				});
+				this.disabledControls = null;
 			}
 
-			let disabledControl = this.el.querySelector(
-				'.cot-form .form-control:not([disabled]), .cot-form button:not([disabled])'
-			);
-			while (disabledControl) {
-				this.disabledControls.push(disabledControl);
-				disabledControl.setAttribute('disabled', '');
-				disabledControl = this.el.querySelector(
-					'.cot-form .form-control:not([disabled]), .cot-form button:not([disabled])'
-				);
+			this.formValidator.resetForm();
+		},
+
+		showAlert(message, sectionIndex, className = 'alert-danger') {
+			let parentNode = this.form;
+			if (sectionIndex != null) {
+				parentNode = parentNode.querySelectorAll('.panel-body')[sectionIndex];
 			}
+
+			const alertView = new AlertView({
+				className: `alert ${className} alert-dismissible`,
+				model: new AlertModel({ message })
+			});
+			parentNode.insertBefore(alertView.el, parentNode.firstChild);
+			return alertView.render();
 		},
 
 		success() {
@@ -107,31 +139,6 @@ const FormView = BaseView.extend(
 					this.trigger('failed');
 				}
 			);
-		},
-
-		restoreFromSuccess() {
-			if (this.disabledControls) {
-				this.disabledControls.forEach(disabledControl => {
-					disabledControl.removeAttribute('disabled');
-				});
-				this.disabledControls = null;
-			}
-
-			this.formValidator.resetForm();
-		},
-
-		showAlert(message, sectionIndex, className = 'alert-danger') {
-			let parentNode = this.form;
-			if (sectionIndex != null) {
-				parentNode = parentNode.querySelectorAll('.panel-body')[sectionIndex];
-			}
-
-			const alertView = new AlertView({
-				className: `alert ${className} alert-dismissible`,
-				model: new AlertModel({ message })
-			});
-			parentNode.insertBefore(alertView.el, parentNode.firstChild);
-			return alertView.render();
 		}
 	},
 	{

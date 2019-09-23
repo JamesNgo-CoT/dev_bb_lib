@@ -37,38 +37,12 @@ function escapeODataValue(value) {
 
 /* exported htm */
 function htm(el, attrs, childEls, cbks) {
-
-	// FINALIZE ELEMENT
-	if (typeof el === 'string') {
-		el = document.createElement(el);
-	}
-	if (!el.hasHtmPropertyDescriptors) {
-		Object.defineProperties(el, htm.propertyDescriptors);
-	}
-
-	// FINALIZE ATTRIBUTES
+	el = Object.defineProperties(document.createElement(el), htm.propertyDescriptors);
 	el.attrs = Object.assign({}, attrs);
-	if (el.hasAttributes()) {
-		for (let index = 0, length = el.attributes.length; index < length; index++) {
-			if (!(el.attributes[index].name in el.attrs)) {
-				el.attrs[el.attributes[index].name] = el.attributes[index].value;
-			}
-		}
-	}
-
-	// FINALIZE CHILD ELEMENTS
-	el.childEls = ((childEls) => !Array.isArray(childEls) ? [childEls] : childEls.slice())(childEls || []);
-	const tempChildEls = [];
-	for (let index = 0, length = el.childNodes.length; index < length; index++) {
-		tempChildEls.push(el.childNodes[index]);
-	}
-	el.childEls.unshift(...tempChildEls);
-
-	// RENDER ELEMENT
-	el.render(cbks);
-
-	return el;
+	el.childEls = (childEls => !Array.isArray(childEls) ? [childEls] : childEls.slice())(childEls || []);
+	return el.render(cbks);
 }
+
 htm.propertyDescriptors = {
 	attrs: {
 		writable: true
@@ -78,18 +52,12 @@ htm.propertyDescriptors = {
 		writable: true
 	},
 
-	hasHtmPropertyDescriptors: {
-		value: true
-	},
-
 	promise: {
 		writable: true
 	},
 
 	render: {
 		value(cbks) {
-
-			// REMOVE OLD ATTRIBUTES
 			if (this.hasAttributes()) {
 				const attributeKeys = [];
 				for (let index = 0, length = this.attributes.length; index < length; index++) {
@@ -100,65 +68,33 @@ htm.propertyDescriptors = {
 				});
 			}
 
-			// REMOVE OLD CHILD ELEMENTS
 			while (this.firstChild) {
 				this.removeChild(this.firstChild);
 			}
 
-			// CLONE VALUES
 			const attrs = Object.assign({}, this.attrs);
-			const childEls = ((childEls) => !Array.isArray(childEls) ? [childEls] : childEls.slice())(this.childEls || []);
+			const childEls = (childEls => !Array.isArray(childEls) ? [childEls] : childEls.slice())(this.childEls || []);
 
 			this.promise = Promise
 				.all([
-
-					// FINALIZE NEW ATTRIBUTES
 					...Object.keys(attrs)
-						.map((key) => {
-							return Promise
-								.resolve()
-								.then(() => {
-									if (typeof attrs[key] === 'function') {
-										return attrs[key](this);
-									}
-									return attrs[key];
-								})
-								.then((finalAttrs) => {
-									attrs[key] = finalAttrs;
-								});
-						}),
+						.map(key => Promise.resolve()
+							.then(() => typeof attrs[key] === 'function' ? attrs[key](this) : attrs[key])
+							.then(finalAttrs => attrs[key] = finalAttrs)),
 
-					// FINALIZE NEW CHILD ELEMENTS
 					...childEls
-						.map((childEl, index) => {
-							return Promise
-								.resolve()
-								.then(() => {
-									if (typeof childEl === 'function') {
-										return childEl(this);
-									}
-									return childEl;
-								})
-								.then((finalChildEl) => {
-									childEls[index] = finalChildEl;
-								})
-						})
+						.map((childEl, index) => Promise.resolve()
+							.then(() => typeof childEl === 'function' ? childEl(this) : childEl)
+							.then(finalChildEl => childEls[index] = finalChildEl))
 				])
 				.then(() => {
-
-					// SET NEW ATTRIBUTES
-					Object.keys(attrs).forEach((key) => {
+					Object.keys(attrs).forEach(key => {
 						if (attrs[key] != null) {
-							if (typeof attrs[key] === 'boolean') {
-								this.setAttribute(key, '');
-							} else {
-								this.setAttribute(key, attrs[key]);
-							}
+							this.setAttribute(key, typeof attrs[key] === 'boolean' ? '' : attrs[key]);
 						}
 					});
 
-					// APPEND NEW CHILD ELEMENTS
-					childEls.forEach((childEl) => {
+					childEls.forEach(childEl => {
 						if (childEl) {
 							if (typeof childEl === 'string') {
 								if (childEls.length === 1) {
@@ -171,13 +107,10 @@ htm.propertyDescriptors = {
 						}
 					});
 
-					// CALL CALLBACKS
-					if (cbks) {
-						cbks.forEach((cbk) => {
-							cbk(this);
-						});
-					}
-
+					return Promise.all(childEls.map(childEl => childEl && childEl.promise ? childEl.promise : null))
+						.then(() => cbks ? Promise.all(cbks.map((cbk) => cbk(this))) : null)
+				})
+				.then(() => {
 					return this;
 				});
 
@@ -753,7 +686,7 @@ const BaseModel = Backbone.Model.extend({
 	initialize(attributes, options = {}) {
 		this.loginModel = options.loginModel;
 
-		Backbone.Model.prototype.initialize.call(this, attributes, options);
+		return Backbone.Model.prototype.initialize.call(this, attributes, options);
 	},
 
 	// PROPERTIES
@@ -831,7 +764,7 @@ const BaseCollection = Backbone.Collection.extend({
 	initialize(models, options = {}) {
 		this.loginModel = options.loginModel;
 
-		Backbone.Collection.prototype.initialize.call(this, models, options);
+		return Backbone.Collection.prototype.initialize.call(this, models, options);
 	},
 
 	// PROPERTY
@@ -960,7 +893,7 @@ const LoginModel = BaseModel.extend({
 				});
 		}
 
-		BaseModel.prototype.initialize.call(this, attributes, options);
+		return BaseModel.prototype.initialize.call(this, attributes, options);
 	},
 
 	// PROPERTIES

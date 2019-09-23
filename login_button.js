@@ -7,7 +7,7 @@ const LoginButtonView = BaseView.extend({
 			this.render();
 		});
 
-		BaseView.prototype.initialize.call(this, options);
+		return BaseView.prototype.initialize.call(this, options);
 	},
 
 	// PROPERTIES

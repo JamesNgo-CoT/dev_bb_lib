@@ -52,10 +52,6 @@ htm.propertyDescriptors = {
 		writable: true
 	},
 
-	promise: {
-		writable: true
-	},
-
 	render: {
 		value(cbks) {
 			if (this.hasAttributes()) {
@@ -73,46 +69,30 @@ htm.propertyDescriptors = {
 			}
 
 			const attrs = Object.assign({}, this.attrs);
+			Object.keys(attrs).forEach(key => {
+				attrs[key] = typeof attrs[key] === 'function' ? attrs[key](this) : attrs[key];
+				if (attrs[key] != null) {
+					this.setAttribute(key, typeof attrs[key] === 'boolean' ? '' : attrs[key]);
+				}
+			});
+
 			const childEls = (childEls => !Array.isArray(childEls) ? [childEls] : childEls.slice())(this.childEls || []);
-
-			this.promise = Promise
-				.all([
-					...Object.keys(attrs)
-						.map(key => Promise.resolve()
-							.then(() => typeof attrs[key] === 'function' ? attrs[key](this) : attrs[key])
-							.then(finalAttrs => attrs[key] = finalAttrs)),
-
-					...childEls
-						.map((childEl, index) => Promise.resolve()
-							.then(() => typeof childEl === 'function' ? childEl(this) : childEl)
-							.then(finalChildEl => childEls[index] = finalChildEl))
-				])
-				.then(() => {
-					Object.keys(attrs).forEach(key => {
-						if (attrs[key] != null) {
-							this.setAttribute(key, typeof attrs[key] === 'boolean' ? '' : attrs[key]);
+			childEls.forEach(childEl => {
+				childEl = typeof childEl === 'function' ? childEl(this) : childEl;
+				if (childEl) {
+					if (typeof childEl === 'string') {
+						if (childEls.length === 1) {
+							this.innerHTML = childEl;
+							return;
 						}
-					});
+						childEl = document.createTextNode(childEl);
+					}
+					this.appendChild(childEl);
+				}
+			});
 
-					childEls.forEach(childEl => {
-						if (childEl) {
-							if (typeof childEl === 'string') {
-								if (childEls.length === 1) {
-									this.innerHTML = childEl;
-									return;
-								}
-								childEl = document.createTextNode(childEl);
-							}
-							this.appendChild(childEl);
-						}
-					});
-
-					return Promise.all(childEls.map(childEl => childEl && childEl.promise ? childEl.promise : null))
-						.then(() => cbks ? Promise.all(cbks.map((cbk) => cbk(this))) : null)
-				})
-				.then(() => {
-					return this;
-				});
+			cbks = (cbks => !Array.isArray(cbks) ? [cbks] : cbks.slice())(cbks || []);
+			cbks.forEach(cbk => cbk(this));
 
 			return this;
 		}

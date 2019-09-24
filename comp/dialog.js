@@ -46,7 +46,7 @@ const DialogView = BaseView.extend({
 			this.render();
 		});
 
-		return BaseView.prototype.initialize.call(this, options);
+		BaseView.prototype.initialize.call(this, options);
 	},
 
 	render() {

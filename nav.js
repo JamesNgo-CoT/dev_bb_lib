@@ -22,7 +22,7 @@ const NavItemView = BaseView.extend({
 			this.render();
 		});
 
-		return BaseView.prototype.initialize.call(this, options);
+		BaseView.prototype.initialize.call(this, options);
 	},
 
 	// PROPERTIES
@@ -113,7 +113,7 @@ const NavView = BaseView.extend({
 			this.render();
 		});
 
-		return BaseView.prototype.initialize.call(this, options);
+		BaseView.prototype.initialize.call(this, options);
 	},
 
 	// PROPERTY

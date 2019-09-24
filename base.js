@@ -1,4 +1,4 @@
-/* global $ _ Backbone cot_app cot_form CotForm */
+/* global $ _ Backbone cot_app cot_form CotForm cotform_ui */
 
 ////////////////////////////////////////////////////////////////////////////////
 // UTILITIES
@@ -276,6 +276,236 @@ if (window.cot_form) {
 		}
 
 		return returnValue;
+	};
+
+	cot_form.prototype.render = function (o) {
+		/*
+		 o = {
+		 target: '#element_id', //required. specify a css selector to where the form should be rendered
+		 formValidationSettings: {} //optional, when specified, the attributes in here are passed through to the formValidation constructor: http://formvalidation.io/settings/
+		 }
+		 */
+		var app = this;
+		var oVal = {
+			fields: {}
+		};
+		var form = document.createElement('form');
+		form.id = this.id;
+		form.className = 'cot-form';
+		form.setAttribute("data-fv-framework", "bootstrap");
+		form.setAttribute("data-fv-icon-valid", "glyphicon glyphicon-ok");
+		form.setAttribute("data-fv-icon-invalid", "glyphicon glyphicon-remove");
+		form.setAttribute("data-fv-icon-validating", "glyphicon glyphicon-refresh");
+
+		if (this.title || "") {
+			var formHead = form.appendChild(document.createElement('h2'));
+			formHead.textContent = this.title;
+		}
+
+		$.each(this.sections, function (i, section) {
+			if (section.type === 'accordion') {
+				if (typeof this.title !== 'string') {
+					throw new Error('Accordion title required.');
+				}
+
+				var template = document.getElementById('js-cotui-accordion-template');
+				if (!template) {
+					template = document.createElement('template');
+					template.setAttribute('id', 'js-cotui-accordion-template');
+					template.innerHTML = [
+						'<div class="panel panel-default accordion__section">',
+						'<div class="panel-heading accordion__header">',
+						'<button class="btn accordion__button" data-type="toggle" aria-controls="{{ID}}" aria-expanded="false"></button>',
+						'</div>',
+						'<div id="{{ID}}">',
+						'{{BODY}}',
+						'</div>',
+						'</div>'
+					].join('');
+					document.body.appendChild(template);
+				}
+
+				var options = {
+					title: this.title,
+					target: form,
+					template: template,
+					allowMultiple: typeof section.allowMultiple === 'boolean' ? section.allowMultiple : true,
+					expandButtonClass: 'accordion__button--expand btn btn-link',
+					collapseButtonClass: 'accordion__button--collapse btn btn-link',
+					sections: [],
+					level: typeof section.headingLevel === 'number' ? section.headingLevel : 3,
+					attrs: []
+				};
+
+				if (typeof section.id === 'string') {
+					options.attrs.push({ 'id': section.id });
+				}
+
+				if (typeof section.className === 'string') {
+					options.attrs.push({ 'class': section.className });
+				}
+
+				var oValTemp = { fields: {} };
+				for (var index = 0, length = section.sections.length; index < length; index++) {
+					const wrapper = document.createElement('div');
+					wrapper.classList.add('panel-body');
+
+					$.each(section.sections[index].rows, function (k, row) {
+						var rowElement = wrapper.appendChild(document.createElement('div'));
+						rowElement.className = 'row';
+						if (row.type == 'repeatcontrol') {
+							app.processRepeatControl(rowElement, oValTemp, row);
+						} else if (row.type == 'grid') {
+							app.processGrid(rowElement, oValTemp, row);
+						} else {
+							$.each(row.fields, function (l, field) {
+								app.processField(rowElement, oValTemp, row, field);
+							});
+						}
+					});
+
+
+					let expanded;
+					if (typeof section.sections[index].expanded === 'boolean') {
+						expanded = section.sections[index].expanded;
+					}
+					if (typeof section.sections[index].expanded !== 'boolean') {
+						if (index === 0) {
+							expanded = true
+						} else {
+							expanded = false
+						}
+					}
+
+					const subSectionOption = {
+						title: section.sections[index].title,
+						body: wrapper,
+						expanded: expanded
+					};
+
+					if (typeof section.sections[index].id === 'string') {
+						subSectionOption.id = section.sections[index].id;
+					}
+
+					options.sections.push(subSectionOption);
+				}
+				for (var key in oValTemp.fields) {
+					if (typeof oValTemp.fields[key].excluded !== 'boolean') {
+						oValTemp.fields[key].excluded = false;
+					}
+					oVal.fields[key] = oValTemp.fields[key];
+				}
+
+				cotform_ui.Accordion(options);
+			} else {
+				var oPanel = form.appendChild(document.createElement('div'));
+				oPanel.id = section.id;
+
+				oPanel.className = (section['className'] !== undefined) ? 'panel ' + section.className : "panel panel-default";
+				if (section.title || "") {
+					var oPanelHead = oPanel.appendChild(document.createElement('div'));
+					oPanelHead.className = 'panel-heading';
+					var oH3 = oPanelHead.appendChild(document.createElement('h3'));
+					var oSpan = oH3.appendChild(document.createElement('span'));
+					oSpan.className = "glyphicon glyphicon-th-large";
+					oH3.appendChild(document.createElement('span'));
+					oH3.textContent = section.title;
+					// issue #141 adding an ID to H3 to reference it in input by aria-labelledby
+					if (section['readSectionName']) {
+						oH3.id = section.id + '_title';
+					}
+				}
+				var oPanelBody = oPanel.appendChild(document.createElement('div'));
+				oPanelBody.className = 'panel-body';
+
+				$.each(section.rows, function (k, row) {
+					var oRow = oPanelBody.appendChild(document.createElement('div'));
+					oRow.className = 'row';
+					if (row.type == 'repeatcontrol') {
+						app.processRepeatControl(oRow, oVal, row);
+					} else if (row.type == 'grid') {
+						app.processGrid(oRow, oVal, row);
+					} else {
+						$.each(row.fields, function (l, field) {
+							app.processField(oRow, oVal, row, field);
+						});
+					}
+				});
+			}
+		});
+		$(o.target).append(form);
+		$.each(this.sections, function (i, section) {
+			$.each(section.rows, function (k, row) {
+				app.initializePluginsInRow(row);
+			});
+		});
+
+
+		//INITIATE FORM VALIDATION
+		var frm = $(form);
+		var options = $.extend({
+			excluded: [':not(.multiselect):disabled', ':not(.multiselect):hidden', ':not(.multiselect):not(:visible)'], //exclude all hidden and disabled fields that are not multiselects
+			feedbackIcons: {
+				valid: 'glyphicon glyphicon-ok',
+				invalid: 'glyphicon glyphicon-remove',
+				validating: 'glyphicon glyphicon-refresh'
+			},
+			onSuccess: this.success,
+			onError: function (e) {
+				if (window.console && console.error) {
+					console.error('Validation error occurred:', e);
+				}
+
+				var $accordions = $('.has-error input, .has-error select, .has-error button, .has-error textarea').closest('[is="cotui-accordion"]');
+				$accordions.each(function (index, accordion) {
+					var $accordion = $(accordion);
+					var $fields = $accordion.find('.has-error input, .has-error select, .has-error button, .has-error textarea');
+					var $sections = $fields.closest('.accordion__section');
+
+					var $expandAllButton = $accordion.find('.accordion__button--expand');
+					if ($expandAllButton.length === 0) {
+						$sections = $sections.first();
+					}
+
+					$sections.find('[data-hidden="true"]').each(function (index2, section) {
+						if (accordion.expandSectionById) {
+							accordion.expandSectionById(section.getAttribute('id'), true);
+						}
+					});
+				});
+
+				var moveTo = $($(".has-error input, .has-error select, .has-error button, .has-error textarea")[0]);
+				moveTo.focus();
+				if (moveTo[0]['getBoundingClientRect']) {
+					var rect = moveTo[0].getBoundingClientRect();
+					if (rect.top < 0 || rect.top > $(window).height() - 50) {
+						$('html,body').animate({
+							scrollTop: Math.max(0, moveTo.offset().top - 100)
+						}, 'slow');
+					}
+				}
+			},
+			fields: oVal.fields
+		}, o['formValidationSettings'] || {});
+
+		frm.formValidation(options)
+			.on('err.field.fv', function (e) {
+				$(e.target).closest('.form-group').find('input,select,textarea').attr('aria-invalid', true);
+			})
+			.on('success.field.fv', function (e) {
+				$(e.target).closest('.form-group').find('input,select,textarea').attr('aria-invalid', false);
+			})
+			.on('err.form.fv', function () {
+				var $firstError = $('.has-error', frm).first();
+				var $firstErrorInput = $firstError.find('input');
+				if ($firstErrorInput && $firstErrorInput.prop('type') === 'hidden') {
+					$firstError.find('button').first().focus();
+				}
+			});
+		frm.find("button.fv-hidden-submit").text("hidden submit button");
+		frm.find("button.fv-hidden-submit").attr("aria-hidden", true);
+
+		app.fixFormValidationRender(frm);
 	};
 }
 

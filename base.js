@@ -745,7 +745,7 @@ const BaseView = Backbone.View.extend({
 
 	remove() {
 		this.removeSubViews();
-		Backbone.View.prototype.remove.call(this);
+		return Backbone.View.prototype.remove.call(this);
 	},
 
 	removeSubViews() {

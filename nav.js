@@ -22,7 +22,7 @@ const NavItemView = BaseView.extend({
 			this.render();
 		});
 
-		BaseView.prototype.initialize.call(this, options);
+		return BaseView.prototype.initialize.call(this, options);
 	},
 
 	// PROPERTIES
@@ -55,15 +55,18 @@ const NavItemView = BaseView.extend({
 
 		const docFragment = document.createDocumentFragment();
 
-		docFragment.appendChild(htm('a', {
-			'href': `#${this.model.escape('fragment')}`
-		}, [
-			this.model.escape('title')
-		], []));
+		const renderPromises = [
+			docFragment.appendChild(
+				htm.a({ 'href': `#${this.model.escape('fragment')}` }, [
+					this.model.escape('title')
+				], [])
+			).promise
+		];
 
 		this.el.appendChild(docFragment);
 
-		return BaseView.prototype.render.call(this);
+		return Promise.all(renderPromises)
+			.then(() => BaseView.prototype.render.call(this));
 	}
 });
 
@@ -132,27 +135,30 @@ const NavView = BaseView.extend({
 		}
 		this.subViews = [];
 
-		const promises = [];
+		const renderPromises = [];
 
 		if (this.collection.length > 0) {
 			const docFragment = document.createDocumentFragment();
 
-			docFragment.appendChild(htm('div', {}, [
-				htm('ul', {
-					'class': 'nav nav-tabs'
-				}, [
-					...this.collection.map((model) => {
-						const navItemView = new NavItemView({ model });
-						navItemView.render();
-						this.subViews.push(navItemView);
-						return navItemView.el;
-					})
-				], [])
-			], []));
+			renderPromises.push(
+				docFragment.appendChild(
+					htm.div({}, [
+						htm.ul({ 'class': 'nav nav-tabs' },
+							this.collection.map((model) => {
+								const navItemView = new NavItemView({ model });
+								this.subViews.push(navItemView);
+								navItemView.render();
+								return navItemView.el;
+							}),
+							[])
+					], [])
+				).promise
+			);
 
 			this.el.appendChild(docFragment);
 		}
 
-		return Promise.all(promises).then(() => BaseView.prototype.render.call(this));
+		return Promise.all(renderPromises)
+			.then(() => BaseView.prototype.render.call(this));
 	}
 });

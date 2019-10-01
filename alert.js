@@ -42,20 +42,25 @@ const AlertView = BaseView.extend({
 
 		const docFragment = document.createDocumentFragment();
 
-		docFragment.appendChild(htm('button', {
-			'class': 'close',
-			'type': 'button',
-			'data-dismiss': 'alert',
-			'aria-label': 'Close'
-		}, [
-			htm('span', { 'aria-hidden': 'true' }, ['&times;'])
-		], []));
-		docFragment.appendChild(htm('div', {}, [
-			this.model.get('message')
-		], []))
+		const renderPromises = [
+			docFragment.appendChild(
+				htm.button({ 'class': 'close', 'type': 'button', 'data-dismiss': 'alert', 'aria-label': 'Close' }, [
+					htm.span({ 'aria-hidden': 'true' }, [
+						'&times;'
+					], [])
+				], [])
+			).promise,
+
+			docFragment.appendChild(
+				htm.div({}, [
+					this.model.get('message')
+				], [])
+			).promise
+		];
 
 		this.el.appendChild(docFragment);
 
-		return BaseView.prototype.render.call(this);
+		return Promise.all(renderPromises)
+			.then(() => BaseView.prototype.render.call(this));
 	}
 });

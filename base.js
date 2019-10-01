@@ -1,4 +1,4 @@
-/* global $ _ Backbone cot_app cot_form CotForm cotform_ui */
+/* global $ _ Backbone cot_app cot_form CotForm */
 
 ////////////////////////////////////////////////////////////////////////////////
 // UTILITIES
@@ -9,6 +9,23 @@ $.ajaxSetup({
 		return data;
 	}
 });
+
+/* exported deepCloneObject */
+function deepCloneObject(value) {
+	if (Array.isArray(value)) {
+		value = Array.from(value);
+		value.forEach((item) => {
+			return deepCloneObject(item);
+		});
+	} else if (typeof value === 'object' && value ) {
+		value = Object.assign({}, value);
+		for (const key in value) {
+			value[key] = deepCloneObject(value[key]);
+		}
+	}
+
+	return value;
+}
 
 /* exported doAjax */
 function doAjax(options) {
@@ -36,50 +53,87 @@ function escapeODataValue(value) {
 }
 
 /* exported htm */
-function htm(el, attrs, childEls, cbks) {
-
-	// FINALIZE ELEMENT
-	if (typeof el === 'string') {
-		el = document.createElement(el);
-	}
-	if (!el.hasHtmPropertyDescriptors) {
-		Object.defineProperties(el, htm.propertyDescriptors);
+const htm = function (element, attributes, childElements, callBacks) {
+	if (typeof element === 'string') {
+		element = document.createElement(element);
 	}
 
-	// FINALIZE ATTRIBUTES
-	el.attrs = Object.assign({}, attrs);
-	if (el.hasAttributes()) {
-		for (let index = 0, length = el.attributes.length; index < length; index++) {
-			if (!(el.attributes[index].name in el.attrs)) {
-				el.attrs[el.attributes[index].name] = el.attributes[index].value;
+	if (element.hasAttributes()) {
+		for (let index = 0, length = element.attributes.length; index < length; index++) {
+			const { name, value } = element.attributes[index];
+
+			if (typeof attributes === 'object' && attributes !== null) {
+				attributes = Object.assign({}, attributes);
+			} else {
+				if (attributes == null) {
+					attributes = {};
+				} else {
+					attributes = {
+						'original attributes': attributes
+					};
+				}
 			}
+
+			attributes[name] = value;
 		}
 	}
 
-	// FINALIZE CHILD ELEMENTS
-	el.childEls = ((childEls) => !Array.isArray(childEls) ? [childEls] : childEls.slice())(childEls || []);
-	const tempChildEls = [];
-	for (let index = 0, length = el.childNodes.length; index < length; index++) {
-		tempChildEls.push(el.childNodes[index]);
+	if (element.firstChild) {
+		const tempChildElements = [];
+		for (let index = 0, length = element.childNodes.length; index < length; index++) {
+			tempChildElements.push(element.childNodes[index]);
+		}
+
+		if (tempChildElements.length > 0) {
+			if (Array.isArray(childElements)) {
+				childElements = childElements.slice();
+			} else {
+				if (childElements == null) {
+					childElements = [];
+				} else {
+					childElements = [childElements];
+				}
+			}
+
+			childElements.unshift(...tempChildElements);
+		}
 	}
-	el.childEls.unshift(...tempChildEls);
 
-	// RENDER ELEMENT
-	el.render(cbks);
+	if (!element.hasHtmPropertyDescriptors) {
+		Object.defineProperties(element, htm.propertyDescriptors);
+	}
 
-	return el;
-}
+	return element
+		.setAttributes(attributes)
+		.setChildElements(childElements)
+		.render(callBacks, true);
+};
+
 htm.propertyDescriptors = {
-	attrs: {
-		writable: true
-	},
-
-	childEls: {
-		writable: true
-	},
-
 	hasHtmPropertyDescriptors: {
 		value: true
+	},
+
+	_attributes: {
+		writable: true
+	},
+
+	setAttributes: {
+		value(attributes) {
+			this._attributes = attributes;
+			return this;
+		}
+	},
+
+	_childElements: {
+		writable: true
+	},
+
+	setChildElements: {
+		value(childElements) {
+			this._childElements = childElements;
+			return this;
+		}
 	},
 
 	promise: {
@@ -87,9 +141,7 @@ htm.propertyDescriptors = {
 	},
 
 	render: {
-		value(cbks) {
-
-			// REMOVE OLD ATTRIBUTES
+		value(callBacks, calledFromFactory = false) {
 			if (this.hasAttributes()) {
 				const attributeKeys = [];
 				for (let index = 0, length = this.attributes.length; index < length; index++) {
@@ -100,88 +152,96 @@ htm.propertyDescriptors = {
 				});
 			}
 
-			// REMOVE OLD CHILD ELEMENTS
 			while (this.firstChild) {
 				this.removeChild(this.firstChild);
 			}
 
-			// CLONE VALUES
-			const attrs = Object.assign({}, this.attrs);
-			const childEls = ((childEls) => !Array.isArray(childEls) ? [childEls] : childEls.slice())(this.childEls || []);
+			const renderAttribute = (key, value) => {
+				if (typeof value === 'object') {
+					return renderAttributes(value);
+				} else if (typeof value === 'function') {
+					return renderAttribute(key, value(this));
+				} else if (value instanceof Promise) {
+					return value.then((finalAttribute) => { return renderAttribute(finalAttribute); });
+				} else if (value != null) {
+					this.setAttribute(key, value);
+				}
+			};
 
-			this.promise = Promise
-				.all([
+			const renderAttributes = (attributes) => {
+				if (typeof attributes === 'function') {
+					return renderAttributes(attributes(this));
+				} else if (attributes instanceof Promise) {
+					return attributes.then((finalAttributes) => { return renderAttributes(finalAttributes); });
+				} else if (typeof attributes === 'object' && attributes != null) {
+					return Promise.all(Object.keys(attributes).map((key) => renderAttribute(key, attributes[key])));
+				}
+			};
 
-					// FINALIZE NEW ATTRIBUTES
-					...Object.keys(attrs)
-						.map((key) => {
-							return Promise
-								.resolve()
-								.then(() => {
-									if (typeof attrs[key] === 'function') {
-										return attrs[key](this);
-									}
-									return attrs[key];
-								})
-								.then((finalAttrs) => {
-									attrs[key] = finalAttrs;
-								});
-						}),
+			const renderChildElement = (childElement, placeHolder) => {
+				placeHolder = placeHolder || this.appendChild(document.createElement('span'));
 
-					// FINALIZE NEW CHILD ELEMENTS
-					...childEls
-						.map((childEl, index) => {
-							return Promise
-								.resolve()
-								.then(() => {
-									if (typeof childEl === 'function') {
-										return childEl(this);
-									}
-									return childEl;
-								})
-								.then((finalChildEl) => {
-									childEls[index] = finalChildEl;
-								})
-						})
-				])
+				if (Array.isArray(childElement)) {
+					placeHolder.parentNode.removeChild(placeHolder);
+					return renderChildElements(childElement);
+				} else if (typeof childElement === 'function') {
+					return renderChildElement(childElement(this), placeHolder);
+				} else if (childElement instanceof Promise) {
+					return childElement.then((finalChildElement) => { return renderChildElement(finalChildElement, placeHolder); });
+				}
+
+				let returnValue;
+
+				if (childElement instanceof HTMLElement || childElement instanceof Text) {
+					placeHolder.parentNode.insertBefore(childElement, placeHolder)
+					if (childElement.hasHtmPropertyDescriptors) {
+						returnValue = childElement.promise;
+					}
+				} else {
+					const tempElement = document.createElement('div');
+					tempElement.innerHTML = childElement;
+					while (tempElement.firstChild) {
+						placeHolder.parentNode.insertBefore(tempElement.firstChild, placeHolder);
+					}
+				}
+
+				placeHolder.parentNode.removeChild(placeHolder);
+				return returnValue;
+			};
+
+			const renderChildElements = (childElements) => {
+				if (typeof childElements === 'function') {
+					return renderChildElements(childElements(this));
+				} else if (childElements instanceof Promise) {
+					return childElements.then((finalChildElements) => { return renderChildElements(finalChildElements); });
+				} else if (childElements instanceof HTMLElement) {
+					return renderChildElement(childElements);
+				} else if (Array.isArray(childElements)) {
+					return Promise.all(childElements.map((childElement) => { return renderChildElement(childElement); }));
+				} else if (childElements != null) {
+					return renderChildElements([childElements]);
+				}
+			};
+
+			this.promise = Promise.all([renderAttributes(this._attributes), renderChildElements(this._childElements)])
 				.then(() => {
-
-					// SET NEW ATTRIBUTES
-					Object.keys(attrs).forEach((key) => {
-						if (attrs[key] != null) {
-							if (typeof attrs[key] === 'boolean') {
-								this.setAttribute(key, '');
-							} else {
-								this.setAttribute(key, attrs[key]);
+					const promises = [];
+					if (!calledFromFactory && this._childElements && Array.isArray(this._childElements)) {
+						this._childElements.forEach((childElement) => {
+							if (childElement.hasHtmPropertyDescriptors) {
+								promises.push(childElement.render().promise);
 							}
-						}
-					});
-
-					// APPEND NEW CHILD ELEMENTS
-					childEls.forEach((childEl) => {
-						if (childEl) {
-							if (typeof childEl === 'string') {
-								if (childEls.length === 1) {
-									this.innerHTML = childEl;
-									return;
-								}
-								childEl = document.createTextNode(childEl);
-							}
-							this.appendChild(childEl);
-						}
-						// childEl = document.createTextNode(childEl);
-						// }
-						// this.appendChild(childEl);
-						// }
-					});
-
-					// CALL CALLBACKS
-					if (cbks) {
-						cbks.forEach((cbk) => {
-							cbk(this);
 						});
 					}
-
+					return Promise.all(promises);
+				})
+				.then(() => {
+					if (callBacks) {
+						callBacks = Array.isArray(callBacks) ? callBacks : [callBacks];
+						return Promise.all(callBacks.map((callBack) => { return callBack(this); }));
+					}
+				})
+				.then(() => {
 					return this;
 				});
 
@@ -189,6 +249,11 @@ htm.propertyDescriptors = {
 		}
 	}
 };
+
+['a', 'abbr', 'acronym', 'address', 'applet', 'area', 'article', 'aside', 'audio', 'b', 'base', 'basefont', 'bdi', 'bdo', 'big', 'blockquote', 'body', 'br', 'button', 'canvas', 'caption', 'center', 'cite', 'code', 'col', 'colgroup', 'datalist', 'dd', 'del', 'details', 'dfn', 'dialog', 'dir', 'div', 'dl', 'dt', 'em', 'embed', 'fieldset', 'figcaption', 'figure', 'font', 'footer', 'form', 'frame', 'frameset', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'head', 'header', 'hr', 'html', 'i', 'iframe', 'img', 'input', 'ins', 'kbd', 'keygen', 'label', 'legend', 'li', 'link', 'main', 'map', 'mark', 'menu', 'menuitem', 'meta', 'meter', 'nav', 'noframes', 'noscript', 'object', 'ol', 'optgroup', 'option', 'output', 'p', 'param', 'picture', 'pre', 'progress', 'q', 'rp', 'rt', 'ruby', 's', 'samp', 'script', 'section', 'select', 'small', 'source', 'span', 'strike', 'strong', 'style', 'sub', 'summary', 'sup', 'table', 'tbody', 'td', 'textarea', 'tfoot', 'th', 'thead', 'time', 'title', 'tr', 'track', 'tt', 'u', 'ul', 'var', 'video', 'wbr']
+	.forEach((element) => {
+		htm[element] = (...args) => { return htm(element, ...args); }
+	});
 
 /* exported loadScripts */
 function loadScripts(...urls) {
@@ -368,452 +433,9 @@ if (window.cot_form) {
 
 		return returnValue;
 	};
-
-	cot_form.prototype.render = function (o) {
-		/*
-		 o = {
-		 target: '#element_id', //required. specify a css selector to where the form should be rendered
-		 formValidationSettings: {} //optional, when specified, the attributes in here are passed through to the formValidation constructor: http://formvalidation.io/settings/
-		 }
-		 */
-		var app = this;
-		var oVal = {
-			fields: {}
-		};
-		var form = document.createElement('form');
-		form.id = this.id;
-		form.className = 'cot-form';
-		form.setAttribute("data-fv-framework", "bootstrap");
-		form.setAttribute("data-fv-icon-valid", "glyphicon glyphicon-ok");
-		form.setAttribute("data-fv-icon-invalid", "glyphicon glyphicon-remove");
-		form.setAttribute("data-fv-icon-validating", "glyphicon glyphicon-refresh");
-
-		if (this.title || "") {
-			var formHead = form.appendChild(document.createElement('h2'));
-			formHead.textContent = this.title;
-		}
-
-		$.each(this.sections, function (i, section) {
-			if (section.type === 'accordion') {
-				if (typeof this.title !== 'string') {
-					throw new Error('Accordion title required.');
-				}
-
-				var template = document.getElementById('js-cotui-accordion-template');
-				if (!template) {
-					template = document.createElement('template');
-					template.setAttribute('id', 'js-cotui-accordion-template');
-					template.innerHTML = [
-						'<div class="panel panel-default accordion__section">',
-						'<div class="panel-heading accordion__header">',
-						'<button class="btn accordion__button" data-type="toggle" aria-controls="{{ID}}" aria-expanded="false"></button>',
-						'</div>',
-						'<div id="{{ID}}">',
-						'{{BODY}}',
-						'</div>',
-						'</div>'
-					].join('');
-					document.body.appendChild(template);
-				}
-
-				var options = {
-					title: this.title,
-					target: form,
-					template: template,
-					allowMultiple: typeof section.allowMultiple === 'boolean' ? section.allowMultiple : true,
-					expandButtonClass: 'accordion__button--expand btn btn-link',
-					collapseButtonClass: 'accordion__button--collapse btn btn-link',
-					sections: [],
-					level: typeof section.headingLevel === 'number' ? section.headingLevel : 3,
-					attrs: []
-				};
-
-				if (typeof section.id === 'string') {
-					options.attrs.push({ 'id': section.id });
-				}
-
-				if (typeof section.className === 'string') {
-					options.attrs.push({ 'class': section.className });
-				}
-
-				var oValTemp = { fields: {} };
-				for (var index = 0, length = section.sections.length; index < length; index++) {
-					const wrapper = document.createElement('div');
-					wrapper.classList.add('panel-body');
-
-					$.each(section.sections[index].rows, function (k, row) {
-						var rowElement = wrapper.appendChild(document.createElement('div'));
-						rowElement.className = 'row';
-						if (row.type == 'repeatcontrol') {
-							app.processRepeatControl(rowElement, oValTemp, row);
-						} else if (row.type == 'grid') {
-							app.processGrid(rowElement, oValTemp, row);
-						} else {
-							$.each(row.fields, function (l, field) {
-								app.processField(rowElement, oValTemp, row, field);
-							});
-						}
-					});
-
-
-					let expanded;
-					if (typeof section.sections[index].expanded === 'boolean') {
-						expanded = section.sections[index].expanded;
-					}
-					if (typeof section.sections[index].expanded !== 'boolean') {
-						if (index === 0) {
-							expanded = true
-						} else {
-							expanded = false
-						}
-					}
-
-					const subSectionOption = {
-						title: section.sections[index].title,
-						body: wrapper,
-						expanded: expanded
-					};
-
-					if (typeof section.sections[index].id === 'string') {
-						subSectionOption.id = section.sections[index].id;
-					}
-
-					options.sections.push(subSectionOption);
-				}
-				for (var key in oValTemp.fields) {
-					if (typeof oValTemp.fields[key].excluded !== 'boolean') {
-						oValTemp.fields[key].excluded = false;
-					}
-					oVal.fields[key] = oValTemp.fields[key];
-				}
-
-				cotform_ui.Accordion(options);
-			} else {
-				var oPanel = form.appendChild(document.createElement('div'));
-				oPanel.id = section.id;
-
-				oPanel.className = (section['className'] !== undefined) ? 'panel ' + section.className : "panel panel-default";
-				if (section.title || "") {
-					var oPanelHead = oPanel.appendChild(document.createElement('div'));
-					oPanelHead.className = 'panel-heading';
-					var oH3 = oPanelHead.appendChild(document.createElement('h3'));
-					var oSpan = oH3.appendChild(document.createElement('span'));
-					oSpan.className = "glyphicon glyphicon-th-large";
-					oH3.appendChild(document.createElement('span'));
-					oH3.textContent = section.title;
-					// issue #141 adding an ID to H3 to reference it in input by aria-labelledby
-					if (section['readSectionName']) {
-						oH3.id = section.id + '_title';
-					}
-				}
-				var oPanelBody = oPanel.appendChild(document.createElement('div'));
-				oPanelBody.className = 'panel-body';
-
-				$.each(section.rows, function (k, row) {
-					var oRow = oPanelBody.appendChild(document.createElement('div'));
-					oRow.className = 'row';
-					if (row.type == 'repeatcontrol') {
-						app.processRepeatControl(oRow, oVal, row);
-					} else if (row.type == 'grid') {
-						app.processGrid(oRow, oVal, row);
-					} else {
-						$.each(row.fields, function (l, field) {
-							app.processField(oRow, oVal, row, field);
-						});
-					}
-				});
-			}
-		});
-		$(o.target).append(form);
-		$.each(this.sections, function (i, section) {
-			$.each(section.rows, function (k, row) {
-				app.initializePluginsInRow(row);
-			});
-		});
-
-
-		//INITIATE FORM VALIDATION
-		var frm = $(form);
-		var options = $.extend({
-			excluded: [':not(.multiselect):disabled', ':not(.multiselect):hidden', ':not(.multiselect):not(:visible)'], //exclude all hidden and disabled fields that are not multiselects
-			feedbackIcons: {
-				valid: 'glyphicon glyphicon-ok',
-				invalid: 'glyphicon glyphicon-remove',
-				validating: 'glyphicon glyphicon-refresh'
-			},
-			onSuccess: this.success,
-			onError: function (e) {
-				if (window.console && console.error) {
-					console.error('Validation error occurred:', e);
-				}
-
-				var $accordions = $('.has-error input, .has-error select, .has-error button, .has-error textarea').closest('[is="cotui-accordion"]');
-				$accordions.each(function (index, accordion) {
-					var $accordion = $(accordion);
-					var $fields = $accordion.find('.has-error input, .has-error select, .has-error button, .has-error textarea');
-					var $sections = $fields.closest('.accordion__section');
-
-					var $expandAllButton = $accordion.find('.accordion__button--expand');
-					if ($expandAllButton.length === 0) {
-						$sections = $sections.first();
-					}
-
-					$sections.find('[data-hidden="true"]').each(function (index2, section) {
-						if (accordion.expandSectionById) {
-							accordion.expandSectionById(section.getAttribute('id'), true);
-						}
-					});
-				});
-
-				var moveTo = $($(".has-error input, .has-error select, .has-error button, .has-error textarea")[0]);
-				moveTo.focus();
-				if (moveTo[0]['getBoundingClientRect']) {
-					var rect = moveTo[0].getBoundingClientRect();
-					if (rect.top < 0 || rect.top > $(window).height() - 50) {
-						$('html,body').animate({
-							scrollTop: Math.max(0, moveTo.offset().top - 100)
-						}, 'slow');
-					}
-				}
-			},
-			fields: oVal.fields
-		}, o['formValidationSettings'] || {});
-
-		frm.formValidation(options)
-			.on('err.field.fv', function (e) {
-				$(e.target).closest('.form-group').find('input,select,textarea').attr('aria-invalid', true);
-			})
-			.on('success.field.fv', function (e) {
-				$(e.target).closest('.form-group').find('input,select,textarea').attr('aria-invalid', false);
-			})
-			.on('err.form.fv', function () {
-				var $firstError = $('.has-error', frm).first();
-				var $firstErrorInput = $firstError.find('input');
-				if ($firstErrorInput && $firstErrorInput.prop('type') === 'hidden') {
-					$firstError.find('button').first().focus();
-				}
-			});
-		frm.find("button.fv-hidden-submit").text("hidden submit button");
-		frm.find("button.fv-hidden-submit").attr("aria-hidden", true);
-
-		app.fixFormValidationRender(frm);
-	};
 }
 
 if (window.CotForm) {
-	const originalRender = CotForm.prototype.render;
-	CotForm.prototype.render = function (...args) {
-		function renderLoop({ definition, renderSection, renderRow, renderField }) {
-			const renderPromises = [];
-
-			const sections = definition.sections;
-			sections.forEach(section => {
-				renderPromises.push(renderSection({ definition, section }));
-
-				const rows = section.rows;
-				rows.forEach(row => {
-					renderPromises.push(renderRow({ definition, section, row }));
-
-					const fields = row.fields;
-					if (fields) {
-						fields.forEach(field => {
-							renderPromises.push(renderField({ definition, section, row, field }));
-						});
-					}
-
-					const grid = row.grid;
-					if (grid) {
-						const fields = grid.fields;
-						fields.forEach(field => {
-							renderPromises.push(renderField({ definition, section, row, field, grid }));
-						});
-					}
-
-					const repeatControl = row.repeatControl;
-					if (repeatControl) {
-						const repeatControlRows = repeatControl.rows;
-						repeatControlRows.forEach(repeatControlRow => {
-							const fields = repeatControlRow.fields;
-							fields.forEach(field => {
-								renderPromises.push(
-									renderField({ definition, section, row, field, repeatControl, repeatControlRow })
-								);
-							});
-						});
-					}
-				});
-			});
-
-			return Promise.all(renderPromises);
-		}
-
-		const cotForm = this;
-		const model = cotForm.getModel();
-		const view = cotForm.getView();
-
-		let definition = this._definition;
-
-		return Promise.resolve()
-			.then(() => {
-				if (typeof definition === 'string') {
-					return doAjax({ url: definition }).then(data => {
-						definition = data;
-					});
-				}
-			})
-			.then(() => {
-				const renderer = stringToFunction(definition.preRender);
-				if (renderer) {
-					return renderer.call(this, { cotForm, model, view, definition });
-				}
-			})
-			.then(() => {
-				return renderLoop({
-					definition,
-					renderSection({ definition, section }) {
-						const renderer = stringToFunction(section.preRender);
-						if (renderer) {
-							return renderer.call(this, { cotForm, model, view, definition, section });
-						}
-					},
-					renderRow({ definition, section, row }) {
-						const renderer = stringToFunction(row.preRender);
-						if (renderer) {
-							return renderer.call(this, { cotForm, model, view, definition, section, row });
-						}
-					},
-					renderField({ definition, section, row, field, grid, repeatControl, repeatControlRow }) {
-						return Promise.resolve()
-							.then(() => {
-								if (field.choices) {
-									if (!field.originalChoices) {
-										if (Array.isArray(field.choices)) {
-											field.originalChoices = field.choices.slice(0);
-										} else {
-											field.originalChoices = field.choices;
-										}
-									}
-
-									if (Array.isArray(field.originalChoices)) {
-										field.choices = field.originalChoices.slice(0);
-									} else {
-										field.choices = field.originalChoices;
-									}
-
-									if (typeof field.choices === 'string') {
-										return doAjax({
-											url: field.choices
-										}).then(data => {
-											field.choices = data;
-										});
-									}
-								}
-							})
-							.then(() => {
-								const renderer = stringToFunction(field.preRender);
-								if (renderer) {
-									return renderer.call(this, {
-										cotForm,
-										model,
-										view,
-										definition,
-										section,
-										row,
-										field,
-										grid,
-										repeatControl,
-										repeatControlRow
-									});
-								}
-
-								if (field.choicesMap) {
-									field.choicesMap = stringToFunction(field.choicesMap);
-									field.choices = field.choicesMap(field.choices);
-								}
-
-								if (
-									field.type === 'dropdown' &&
-									(field.choices.length === 0 || field.choices[0].value !== '')
-								) {
-									field.choices.unshift({
-										text: `- Select -`,
-										value: ''
-									});
-								}
-
-								if (field.choices) {
-									let value;
-									if (field.value != null) {
-										value = field.value;
-									} else if (field.bindTo != null && model && model.has(field.bindTo)) {
-										value = model.get(field.bindTo);
-									}
-
-									if (value != null) {
-										const choices = field.choices.map(choice =>
-											choice.value != null ? choice.value : choice.text
-										);
-
-										if (!Array.isArray(value)) {
-											value = [value];
-										}
-
-										value.forEach(val => {
-											if (choices.indexOf(val) === -1) {
-												field.choices.unshift({ text: value, value });
-											}
-										});
-									}
-								}
-							});
-					}
-				});
-			})
-			.then(() => {
-				return originalRender.call(this, ...args);
-			})
-			.then(() => {
-				return renderLoop({
-					definition,
-					renderSection({ definition, section }) {
-						const renderer = stringToFunction(section.postRender);
-						if (renderer) {
-							return renderer.call(this, { cotForm, model, view, definition, section });
-						}
-					},
-					renderRow({ definition, section, row }) {
-						const renderer = stringToFunction(row.postRender);
-						if (renderer) {
-							return renderer.call(this, { cotForm, model, view, definition, section, row });
-						}
-					},
-					renderField({ definition, section, row, field, grid, repeatControl, repeatControlRow }) {
-						const renderer = stringToFunction(field.postRender);
-						if (renderer) {
-							return renderer.call(this, {
-								cotForm,
-								model,
-								view,
-								definition,
-								section,
-								row,
-								field,
-								grid,
-								repeatControl,
-								repeatControlRow
-							});
-						}
-					}
-				});
-			})
-			.then(() => {
-				const renderer = stringToFunction(definition.postRender);
-				if (renderer) {
-					return renderer.call(this, { cotForm, model, view, definition });
-				}
-			});
-	};
-
 	CotForm.prototype.getModel = function () {
 		return this._model;
 	};

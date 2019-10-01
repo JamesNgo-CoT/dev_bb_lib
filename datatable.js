@@ -182,8 +182,7 @@ const DatatableView = BaseView.extend({
 		const thead = newTable.appendChild(document.createElement('thead'));
 
 		const tr = thead.appendChild(document.createElement('tr'));
-		const datatableDefinition = _.result(this, 'datatableDefinition');
-		datatableDefinition.columns.forEach(column => {
+		this.finalDatatableDefinition.columns.forEach(column => {
 			const th = tr.appendChild(document.createElement('th'));
 			if (column.title) {
 				th.textContent = column.title;
@@ -390,8 +389,7 @@ const FilteredDatatableView = DatatableView.extend({
 			const tr = thead.appendChild(document.createElement('tr'));
 
 			const promises = [];
-			const datatableDefinition = _.result(this, 'datatableDefinition');
-			datatableDefinition.columns.forEach((column, index) => {
+			this.finalDatatableDefinition.columns.forEach((column, index) => {
 				const th = tr.appendChild(document.createElement('th'));
 
 				if (column.searchable === false) {

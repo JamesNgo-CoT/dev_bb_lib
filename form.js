@@ -53,30 +53,28 @@ const FormView = BaseView.extend({
 							formDefinition = data;
 						});
 				}
-
-				formDefinition = deepCloneObject(formDefinition);
 			})
 			.then(() => {
-				// formDefinition.id = _.result(formDefinition, 'id') || FormView.uniqueId();
-				formDefinition.rootPath = _.result(formDefinition, 'rootPath') || _.result(this, 'rootPath');
-				formDefinition.useBinding = true;
-				formDefinition.success = formDefinition.success || ((event) => {
+				this.finalFormDefinition = deepCloneObject(formDefinition);
+				this.finalFormDefinition.rootPath = _.result(this.finalFormDefinition, 'rootPath');
+				this.finalFormDefinition.useBinding = true;
+				this.finalFormDefinition.success = this.finalFormDefinition.success || ((event) => {
 					event.preventDefault();
 					this.success();
 					return false;
 				});
 
-				if (formDefinition.scripts) {
-					if (!Array.isArray(formDefinition.scripts)) {
-						formDefinition.scripts = [formDefinition.scripts];
+				if (this.finalFormDefinition.scripts) {
+					if (!Array.isArray(this.finalFormDefinition.scripts)) {
+						this.finalFormDefinition.scripts = [this.finalFormDefinition.scripts];
 					}
 
-					return loadScripts(...formDefinition.scripts);
+					return loadScripts(...this.finalFormDefinition.scripts);
 				}
 			})
 			.then(() => {
 				function renderLoop({ definition, preRender, preRenderSection, preRenderRow, renderField, postRenderRow,
-					prostRenderSection, postRender }) {
+					postRenderSection, postRender }) {
 
 					const renderPromises = [];
 
@@ -115,7 +113,7 @@ const FormView = BaseView.extend({
 							renderPromises.push(postRenderRow ? postRenderRow({ definition, section, row }) : null);
 						});
 
-						renderPromises.push(prostRenderSection ? prostRenderSection({ definition, section }) : null);
+						renderPromises.push(postRenderSection ? postRenderSection({ definition, section }) : null);
 					});
 
 					renderPromises.push(postRender ? postRender({ definition }) : null);
@@ -126,26 +124,26 @@ const FormView = BaseView.extend({
 				return Promise.resolve()
 					.then(() => {
 						return renderLoop({
-							definition: formDefinition,
-							preRender({ definition }) {
+							definition: this.finalFormDefinition,
+							preRender: ({ definition }) => {
 								const renderer = stringToFunction(definition.preRender);
 								if (renderer) {
 									return renderer({ view: this, model: this.model, definition });
 								}
 							},
-							preRenderSection({ definition, section }) {
+							preRenderSection: ({ definition, section }) => {
 								const renderer = stringToFunction(section.preRender);
 								if (renderer) {
 									return renderer({ view: this, model: this.model, definition, section });
 								}
 							},
-							preRenderRow({ definition, section, row }) {
+							preRenderRow: ({ definition, section, row }) => {
 								const renderer = stringToFunction(row.preRender);
 								if (renderer) {
 									return renderer({ view: this, model: this.model, definition, section, row });
 								}
 							},
-							renderField({ definition, section, row, grid, repeatControl, repeatControlRow, field }) {
+							renderField: ({ definition, section, row, grid, repeatControl, repeatControlRow, field }) => {
 								return Promise.resolve()
 									.then(() => {
 
@@ -205,8 +203,7 @@ const FormView = BaseView.extend({
 						});
 					})
 					.then(() => {
-						console.log(formDefinition);
-						this.cotForm = new CotForm(formDefinition);
+						this.cotForm = new CotForm(this.finalFormDefinition);
 						this.cotForm.setModel(this.model);
 						this.cotForm.setView(this);
 
@@ -217,8 +214,8 @@ const FormView = BaseView.extend({
 						this.formValidator = $(this.form).data('formValidation');
 
 						return renderLoop({
-							definition: formDefinition,
-							renderField({ definition, section, row, grid, repeatControl, repeatControlRow, field }) {
+							definition: this.finalFormDefinition,
+							renderField: ({ definition, section, row, grid, repeatControl, repeatControlRow, field }) => {
 								const renderer = stringToFunction(field.postRender);
 								if (renderer) {
 									return renderer({
@@ -228,7 +225,7 @@ const FormView = BaseView.extend({
 									});
 								}
 							},
-							postRenderRow({ definition, section, row }) {
+							postRenderRow: ({ definition, section, row }) => {
 								const renderer = stringToFunction(row.postRender);
 								if (renderer) {
 									return renderer({
@@ -237,13 +234,13 @@ const FormView = BaseView.extend({
 									});
 								}
 							},
-							postRenderSection({ definition, section }) {
+							postRenderSection: ({ definition, section }) => {
 								const renderer = stringToFunction(section.postRender);
 								if (renderer) {
 									return renderer({ cotForm: this.cotForm, view: this, model: this.model, definition, section });
 								}
 							},
-							postRender({ definition }) {
+							postRender: ({ definition }) => {
 								const renderer = stringToFunction(definition.postRender);
 								if (renderer) {
 									return renderer({

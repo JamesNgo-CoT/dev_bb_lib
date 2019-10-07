@@ -537,33 +537,6 @@ const BaseRouter = Backbone.Router.extend({
 
 	// METHODS
 
-	// execute(callback, args, name) {
-	// 	let cleanupFunctionReturnValue;
-
-	// 	if (typeof this.cleanupFunction === 'function') {
-	// 		cleanupFunctionReturnValue = this.cleanupFunction.call(this, name);
-	// 		if (cleanupFunctionReturnValue !== false) {
-	// 			this.cleanupFunction = null;
-	// 		}
-	// 	}
-
-	// 	if (cleanupFunctionReturnValue !== false && typeof callback === 'function') {
-	// 		Promise.resolve()
-	// 			.then(() => {
-	// 				return callback.call(this, ...args);
-	// 			})
-	// 			.then(cleanupFunction => {
-	// 				if (typeof cleanupFunction === 'function') {
-	// 					this.cleanupFunction = cleanupFunction;
-	// 				}
-	// 			});
-	// 	}
-
-	// 	if (cleanupFunctionReturnValue === false) {
-	// 		this.routeDefault();
-	// 	}
-	// },
-
 	execute(callback, args, name) {
 		Promise.resolve()
 			.then(() => {

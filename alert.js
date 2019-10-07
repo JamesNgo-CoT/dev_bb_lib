@@ -29,6 +29,16 @@ const AlertView = BaseView.extend({
 
 	className: 'alert alert-danger alert-dismissible',
 
+	events: {
+		['close.bs.alert']() {
+			this.trigger('close.bs.alert');
+		},
+
+		['closed.bs.alert']() {
+			this.trigger('closed.bs.alert');
+		}
+	},
+
 	// METHODS
 
 	close() {

@@ -2,6 +2,7 @@
 
 /* exported FormView */
 const FormView = BaseView.extend({
+
 	// PROPERTY
 
 	attributes: {

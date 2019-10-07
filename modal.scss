@@ -1,0 +1,11 @@
+%ModalView {
+	button {
+		margin: 0;
+	}
+}
+
+%ModalViewRoot {
+	[data-view="ModalView"] {
+		@extend %ModalView;
+	}
+}

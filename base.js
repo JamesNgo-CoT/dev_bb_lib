@@ -17,7 +17,7 @@ function deepCloneObject(value) {
 		value.forEach((item) => {
 			return deepCloneObject(item);
 		});
-	} else if (typeof value === 'object' && value ) {
+	} else if (typeof value === 'object' && value) {
 		value = Object.assign({}, value);
 		for (const key in value) {
 			value[key] = deepCloneObject(value[key]);
@@ -537,31 +537,63 @@ const BaseRouter = Backbone.Router.extend({
 
 	// METHODS
 
+	// execute(callback, args, name) {
+	// 	let cleanupFunctionReturnValue;
+
+	// 	if (typeof this.cleanupFunction === 'function') {
+	// 		cleanupFunctionReturnValue = this.cleanupFunction.call(this, name);
+	// 		if (cleanupFunctionReturnValue !== false) {
+	// 			this.cleanupFunction = null;
+	// 		}
+	// 	}
+
+	// 	if (cleanupFunctionReturnValue !== false && typeof callback === 'function') {
+	// 		Promise.resolve()
+	// 			.then(() => {
+	// 				return callback.call(this, ...args);
+	// 			})
+	// 			.then(cleanupFunction => {
+	// 				if (typeof cleanupFunction === 'function') {
+	// 					this.cleanupFunction = cleanupFunction;
+	// 				}
+	// 			});
+	// 	}
+
+	// 	if (cleanupFunctionReturnValue === false) {
+	// 		this.routeDefault();
+	// 	}
+	// },
+
 	execute(callback, args, name) {
-		let cleanupFunctionReturnValue;
+		Promise.resolve()
+			.then(() => {
+				if (typeof this.cleanupFunction === 'function') {
+					return this.cleanupFunction.call(this, name);
+				}
 
-		if (typeof this.cleanupFunction === 'function') {
-			cleanupFunctionReturnValue = this.cleanupFunction.call(this, name);
-			if (cleanupFunctionReturnValue !== false) {
-				this.cleanupFunction = null;
-			}
-		}
+				return true;
+			})
+			.then((cleanupFunctionReturnValue) => {
+				if (cleanupFunctionReturnValue !== false) {
+					this.cleanupFunction = null;
+				}
 
-		if (cleanupFunctionReturnValue !== false && typeof callback === 'function') {
-			Promise.resolve()
-				.then(() => {
-					return callback.call(this, ...args);
-				})
-				.then(cleanupFunction => {
-					if (typeof cleanupFunction === 'function') {
-						this.cleanupFunction = cleanupFunction;
-					}
-				});
-		}
+				if (cleanupFunctionReturnValue !== false && typeof callback === 'function') {
+					Promise.resolve()
+						.then(() => {
+							return callback.call(this, ...args);
+						})
+						.then(cleanupFunction => {
+							if (typeof cleanupFunction === 'function') {
+								this.cleanupFunction = cleanupFunction;
+							}
+						});
+				}
 
-		if (cleanupFunctionReturnValue === false) {
-			this.routeDefault();
-		}
+				if (cleanupFunctionReturnValue === false) {
+					this.routeDefault();
+				}
+			})
 	},
 
 	route(route, name, callback) {

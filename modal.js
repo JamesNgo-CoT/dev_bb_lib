@@ -125,16 +125,31 @@ const ModalView = BaseView.extend({
 	}
 });
 
+ModalView.alert = (message = '') => {
+	const modalModel = new ModalModel({
+		heading: 'Alert',
+		body: htm.p({}, [message], [])
+	});
 
-ModalView.confirm = (message = '') => {
+	const modalView = new ModalView({ model: modalModel });
+	return modalView.render()
+		.then(() => {
+			return modalView.show()
+				.then(() => {
+					modalView.remove();
+				})
+		});
+};
+
+ModalView.confirm = (message = '', ok = 'OK', cancel = 'Cancel') => {
 	let continueNavigation = false;
 
 	const modalModel = new ModalModel({
 		heading: 'Confirm',
 		body: htm.p({}, [message], []),
 		footer: htm.div({}, [
-			htm.button({ 'class': 'btn btn-cancel', 'data-dismiss': 'modal' }, ['Cancel'], []),
-			htm.button({ 'class': 'btn btn-primary', 'data-dismiss': 'modal' }, ['Continue'], [
+			htm.button({ 'class': 'btn btn-cancel', 'data-dismiss': 'modal' }, [cancel], []),
+			htm.button({ 'class': 'btn btn-primary', 'data-dismiss': 'modal' }, [ok], [
 				(element) => {
 					element.addEventListener('click', () => {
 						continueNavigation = true;

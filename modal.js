@@ -40,8 +40,6 @@ const ModalView = BaseView.extend({
 			this.trigger('hide.bs.modal');
 		},
 		['hidden.bs.modal']() {
-			console.log('hidden.bs.modal');
-
 			if (this.lastActiveElement) {
 				this.lastActiveElement.focus();
 			}

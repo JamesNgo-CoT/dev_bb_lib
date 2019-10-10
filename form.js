@@ -158,6 +158,13 @@ const FormView = BaseView.extend({
 													field.choices = data;
 												});
 											}
+
+											if (typeof field.choices === 'object' && !Array.isArray(field.choices) && field.choices !== null) {
+												return doAjax(field.choices)
+													.then(({ data }) => {
+														field.choices = data;
+													});
+											}
 										}
 									})
 									.then(() => {
